@@ -7,6 +7,7 @@
   isobonn demo   AREA    the comparison page in out/AREA/demo/
   isobonn all    AREA    fetch, render, style, demo
   isobonn city   AREA    a whole city (areas/bonn.yaml): every window, the zoom levels and the viewer
+  isobonn site   bonn    the public site for GitHub Pages: out/site/ and out/site.tar.gz
 
 AREA is a name in areas/ (e.g. poppelsdorf) or a path to a YAML file.
 """
@@ -101,6 +102,11 @@ def cmd_city(area, style, ramps, args):
     print(f"preview: {res['preview']} ({res['sheets']} sheets, {res['sheet_mb']:.0f} MB)")
 
 
+def cmd_site(area, style, ramps, args):
+    from .demo import build_site
+    build_site(ROOT, OUT)
+
+
 def cmd_all(area, style, ramps, args):
     args.look = "all"
     for step in (cmd_fetch, cmd_render, cmd_style, cmd_demo):
@@ -110,7 +116,7 @@ def cmd_all(area, style, ramps, args):
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="isobonn", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["fetch", "sun", "render", "style", "demo", "all", "city"])
+    ap.add_argument("command", choices=["fetch", "sun", "render", "style", "demo", "all", "city", "site"])
     ap.add_argument("area")
     ap.add_argument("--look", default="all", help="flat, ramp, photo or all (style only)")
     ap.add_argument("--workers", type=int, default=1, help="city: windows rendered in parallel (about 3.5 GB each)")

@@ -122,7 +122,9 @@ figcaption strong { display: block; font-family: var(--f-display); font-size: 1.
 .notes h2 + ul, .notes h2 + ol { margin-top: 2px; }
 .notes ul + h2 { margin-top: 16px; }
 .num { font-variant-numeric: tabular-nums; }
-footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.85rem; color: var(--ink-3); }
+footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.85rem; color: var(--ink-3); display: grid; gap: 4px; }
+footer p { margin: 0; }
+footer a { color: var(--ink-2); }
 
 @media (max-width: 860px) {
   .trio, .notes { grid-template-columns: minmax(0, 1fr); }
@@ -212,7 +214,10 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.85re
     </div>
   </section>
 
-  <footer>Data: Geobasis NRW, Datenlizenz Deutschland Zero 2.0. Reference: Isometric NYC. Robonn, the robotics club at Universität Bonn · rendered 2026-11-11.</footer>
+  <footer>
+  <p>Data: Geobasis NRW, Datenlizenz Deutschland Zero 2.0. Map images: CC BY 4.0, Robonn, the robotics club at Universität Bonn. Reference: Isometric NYC. Code: <a href="https://github.com/robonn-club/isometric-bonn">robonn-club/isometric-bonn</a> · rendered 2026-11-11.<!-- city-link --></p>
+  <p><a href="https://robonn.de/privacy.html#impressum">Impressum</a> · <a href="https://robonn.de/privacy.html">Privacy</a> · <a href="https://robonn.de">robonn.de</a></p>
+  </footer>
 </div>
 
 <script>

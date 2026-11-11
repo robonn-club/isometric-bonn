@@ -45,6 +45,24 @@ The run can stop at any time: `out/bonn/progress.json` records finished windows,
 command continues. Without `--drop-layers` each window also keeps its layers (about 50 MB each),
 so the whole city can be recoloured without rendering again.
 
+## Publish on GitHub Pages
+
+Tiles never enter git. They go into a GitHub Release as one archive, and a workflow you start by
+hand deploys it ([`.github/workflows/pages.yml`](.github/workflows/pages.yml)).
+
+```sh
+uv run isobonn site bonn                       # out/site/ and out/site.tar.gz (about 175 MB)
+python3 -m http.server -d out/site 8000        # optional: check it at http://localhost:8000
+gh release create map-2026-11-11 out/site.tar.gz --title "Map of Bonn, 2026-11-11" --notes "First full render."
+gh workflow run pages.yml                      # deploys the latest release; -f tag=... for another
+```
+
+Once per repository: Settings → Pages → Build and deployment → Source: **GitHub Actions**. The
+site then lives at https://robonn-club.github.io/isometric-bonn/: the city at the root and the
+three-look comparison at `/poppelsdorf/`. It loads nothing from other hosts, links robonn.de's
+Impressum and privacy page, and stays far below Pages' 1 GB limit (one render is about 175 MB).
+To go back to an earlier render, run the workflow with that release's tag.
+
 ## Change the look
 
 Colours are in [`style/palette.yaml`](style/palette.yaml), rules and thresholds in
@@ -101,4 +119,4 @@ skips without them.
 ## Data and licences
 
 Sources, survey dates and licence status are in [`SOURCES.md`](SOURCES.md). Code is MIT
-([`LICENSE`](LICENSE)). Map tiles and sprites will be CC BY 4.0 once they are published.
+([`LICENSE`](LICENSE)); map images and sprites are CC BY 4.0 ([`LICENSE-ART`](LICENSE-ART)).

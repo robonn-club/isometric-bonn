@@ -119,7 +119,8 @@ def city_buildings(data_dir: Path, poly, tiles) -> int:
     return len(seen)
 
 
-def build_city_viewer(area: dict, style: dict, root: Path, out: Path, look: str = "ramp") -> dict:
+def build_city_viewer(area: dict, style: dict, root: Path, out: Path, look: str = "ramp",
+                      pack_preview: bool = True) -> dict:
     """The city viewer: out/<area>/viewer/index.html over the 512 px tiles, and
     out/<area>/preview/page.html over 2048 px sheets (fewer files, for a hosted preview)."""
     import datetime as dt
@@ -168,6 +169,8 @@ def build_city_viewer(area: dict, style: dict, root: Path, out: Path, look: str 
     (out / "viewer").mkdir(parents=True, exist_ok=True)
     (out / "viewer" / "index.html").write_text(_wrap(_fill(template, local)))
 
+    if not pack_preview:
+        return {"viewer": out / "viewer" / "index.html", "values": values}
     sheets = pack(tiles_root, out / "preview" / "pack")
     prev = dict(values, tile_px=TILE * 4, url="pack/{z}/{x}_{y}.webp",
                 levels=json.dumps({str(k): [f"{x}_{y}" for x, y in v] for k, v in sheets.items()}))
@@ -176,3 +179,64 @@ def build_city_viewer(area: dict, style: dict, root: Path, out: Path, look: str 
     files = sorted((out / "preview" / "pack").rglob("*.webp"))
     return {"viewer": out / "viewer" / "index.html", "preview": out / "preview" / "page.html",
             "sheets": len(files), "sheet_mb": sum(f.stat().st_size for f in files) / 1e6, "values": values}
+
+
+def build_site(root: Path, out_root: Path, look: str = "ramp", limit_mb: float = 1000) -> Path:
+    """The public site, ready for GitHub Pages: out/site/ and out/site.tar.gz.
+
+    index.html is the city viewer over the 512 px tiles in tiles/, and poppelsdorf/ holds the
+    comparison page. Everything is relative, so the site works under any path, such as
+    https://robonn-club.github.io/isometric-bonn/. The archive goes into a GitHub Release;
+    .github/workflows/pages.yml deploys it. Tiles never enter git.
+    """
+    import os
+    import tarfile
+
+    import yaml
+
+    style = yaml.safe_load((root / "style" / "style.yaml").read_text())
+    area = yaml.safe_load((root / "areas" / "bonn.yaml").read_text())
+    city_out = out_root / area["name"]
+    site = out_root / "site"
+    if site.exists():
+        shutil.rmtree(site)
+    (site / "poppelsdorf").mkdir(parents=True)
+
+    # Tiles: hard links when possible (same disk, no extra space), copies otherwise.
+    src = city_out / "tiles" / look
+    for f in src.rglob("*.webp"):
+        dst = site / "tiles" / f.relative_to(src)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.link(f, dst)
+        except OSError:
+            shutil.copy2(f, dst)
+
+    # The city page, pointing at tiles/ and linking the comparison page.
+    res = build_city_viewer(area, style, root, city_out, look=look, pack_preview=False)
+    page = (city_out / "viewer" / "index.html").read_text()
+    page = page.replace(f"../tiles/{look}/{{z}}/{{x}}_{{y}}.webp", "tiles/{z}/{x}_{y}.webp")
+    page = page.replace("<!-- compare-link -->",
+                        ' The three candidate looks are compared <a href="poppelsdorf/">in Poppelsdorf</a>.')
+    (site / "index.html").write_text(page)
+
+    # The Poppelsdorf comparison page, linking back to the city.
+    demo = out_root / "poppelsdorf" / "demo"
+    for f in demo.glob("*.png"):
+        shutil.copy2(f, site / "poppelsdorf" / f.name)
+    p = (demo / "index.html").read_text()
+    p = p.replace("<!-- city-link -->", ' See <a href="../">all of Bonn</a>.')
+    (site / "poppelsdorf" / "index.html").write_text(p)
+
+    size = sum(f.stat().st_size for f in site.rglob("*") if f.is_file())
+    if size > limit_mb * 1e6:
+        raise ValueError(f"site is {size / 1e6:.0f} MB, over the {limit_mb:.0f} MB limit of GitHub Pages")
+    archive = out_root / "site.tar.gz"
+    with tarfile.open(archive, "w:gz", compresslevel=6) as tar:
+        for f in sorted(site.rglob("*")):
+            if f.is_file():
+                tar.add(f, arcname=str(f.relative_to(site)))
+    files = sum(1 for f in site.rglob("*") if f.is_file())
+    print(f"site: {site} ({files} files, {size / 1e6:.0f} MB); archive {archive} ({archive.stat().st_size / 1e6:.0f} MB)")
+    print(f"buildings {res['values']['buildings']}, tiles {res['values']['tiles']}")
+    return archive

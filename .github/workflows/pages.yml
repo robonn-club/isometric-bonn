@@ -1,0 +1,59 @@
+name: Deploy map
+
+# Tiles never enter git. To publish a render:
+#   1. uv run isobonn site bonn          (builds out/site/ and out/site.tar.gz)
+#   2. gh release create map-YYYY-MM-DD out/site.tar.gz --title "Map YYYY-MM-DD" --notes "..."
+#   3. Actions → Deploy map → Run workflow (or: gh workflow run pages.yml)
+# Set Settings → Pages → Source to "GitHub Actions" once, as in prototype-space.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release whose site.tar.gz to deploy (empty: the latest release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the site archive from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [ -n "$TAG" ]; then
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern site.tar.gz
+          else
+            gh release download --repo "$GITHUB_REPOSITORY" --pattern site.tar.gz
+          fi
+      - name: Unpack and check the size (GitHub Pages allows 1 GB)
+        run: |
+          mkdir _site
+          tar -xzf site.tar.gz -C _site
+          test -f _site/index.html
+          size=$(du -sb _site | cut -f1)
+          echo "site: $(find _site -type f | wc -l) files, $((size / 1000000)) MB"
+          test "$size" -lt 1000000000
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

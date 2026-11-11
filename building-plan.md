@@ -261,8 +261,11 @@ of Phases 1 and 2 and before the 0a vote, in the plan-default look:
 - Bridges: LoD2 has none, so raised structures from nDOM50 (over 4 m, not plants, wider than a bus) become
   floating decks; the Kennedybrücke and the station's platform roofs come out right, and ships turn into small
   decks. The Rhine is found by its infrared, which works well.
-- Not yet reviewed by members (Phase 2's "every km² reviewed"), no deploy (Phase 1), and the look is still the
-  0a candidate.
+- Publishing is ready as step 8 describes: `isobonn site bonn` packs the site (about 175 MB), Kaya attaches it to a
+  Release, and the manual workflow `.github/workflows/pages.yml` deploys it with the same actions as prototype-space.
+  Tested locally under a sub-path: no requests to other hosts.
+- Not yet reviewed by members (Phase 2's "every km² reviewed"), not yet deployed, and the look is still the 0a
+  candidate.
 
 ## Optional AI upgrade
 
