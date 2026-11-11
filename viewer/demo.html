@@ -1,0 +1,361 @@
+<title>Isometric Poppelsdorf</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a light table. The map is one full-width plate with a slim instrument strip on top;
+   the comparison and the notes sit below it. Colours are the club's Rhein palette, so the map
+   is the only colourful thing on the page. Outfit and Manrope: SIL Open Font License 1.1
+   (viewer/fonts), inlined so the page makes no third-party requests. */
+@font-face { font-family: "Outfit"; src: url({{font_display}}) format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url({{font_body}}) format("woff2"); font-weight: 200 800; font-display: swap; }
+
+:root {
+  --paper: #ecf1f5;
+  --sunk: #e2e8ed;
+  --ink: #131313;
+  --ink-2: #293740;
+  --ink-3: #485f66;
+  --line: #c1ced9;
+  --line-2: #84969f;
+  --act: #293740;
+  --act-ink: #ecf1f5;
+  --plate: #d5dee5;
+  --chip: rgba(19, 19, 19, 0.82);
+  --chip-ink: #ecf1f5;
+  --f-display: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-body: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131313; --sunk: #1e2529; --ink: #ecf1f5; --ink-2: #c1ced9; --ink-3: #84969f;
+    --line: #293740; --line-2: #485f66; --act: #ecf1f5; --act-ink: #131313; --plate: #0d1114;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #131313; --sunk: #1e2529; --ink: #ecf1f5; --ink-2: #c1ced9; --ink-3: #84969f;
+  --line: #293740; --line-2: #485f66; --act: #ecf1f5; --act-ink: #131313; --plate: #0d1114;
+  color-scheme: dark;
+}
+
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+.page {
+  max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: grid; gap: 40px;
+}
+h1, h2 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; color: var(--ink); }
+h1 { font-size: clamp(2rem, 1.5rem + 2.4vw, 3.1rem); line-height: 1.05; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; line-height: 1.2; }
+p { margin: 0; }
+.intro { display: grid; gap: 12px; max-width: 68ch; }
+.eyebrow { font: 600 0.78rem/1.3 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.lede { font-size: 1.08rem; color: var(--ink-2); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* viewer */
+.viewer { display: grid; gap: 10px; }
+.strip { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.looks { display: inline-flex; flex-wrap: wrap; gap: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 3px; margin: 0; }
+.looks input { position: absolute; opacity: 0; pointer-events: none; }
+.looks label { padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--ink-2); }
+.looks input:checked + label { background: var(--act); color: var(--act-ink); }
+.looks input:focus-visible + label { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tools button {
+  font: 600 0.95rem/1 var(--f-body); color: var(--ink); background: transparent;
+  border: 1px solid var(--line-2); border-radius: 6px; min-width: 36px; height: 34px; padding: 0 10px; cursor: pointer;
+}
+.tools button:hover:not(:disabled) { background: var(--sunk); }
+.tools button:disabled { opacity: 0.4; cursor: default; }
+.tools output { font: 600 0.9rem/1 var(--f-mono); min-width: 3.2ch; text-align: center; font-variant-numeric: tabular-nums; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; color: var(--ink-2); cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+
+.map {
+  position: relative; overflow: hidden; background: var(--plate); border-radius: 6px;
+  aspect-ratio: 16 / 9; max-height: 640px; width: 100%; max-width: 100%;
+  cursor: grab; touch-action: none; user-select: none;
+}
+.map.dragging { cursor: grabbing; }
+.map img {
+  position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0;
+  image-rendering: pixelated; pointer-events: none;
+}
+.pins { position: absolute; inset: 0; pointer-events: none; }
+.pin {
+  position: absolute; left: 0; top: 0; translate: -50% calc(-100% - 7px); white-space: nowrap;
+  font: 600 0.78rem/1 var(--f-body); color: var(--chip-ink); background: var(--chip);
+  padding: 5px 8px; border-radius: 4px;
+}
+.pin::after {
+  content: ""; position: absolute; left: 50%; top: 100%; translate: -50% 0;
+  border: 5px solid transparent; border-top-color: var(--chip);
+}
+.scale { position: absolute; left: 12px; bottom: 10px; pointer-events: none; }
+.scale span {
+  display: inline-block; font: 600 0.75rem/1 var(--f-mono); color: var(--chip-ink);
+  background: var(--chip); padding: 3px 6px; border-radius: 3px; margin-left: 6px;
+}
+.scale svg { display: inline-block; vertical-align: bottom; overflow: visible; }
+.hint { font-size: 0.85rem; color: var(--ink-3); }
+kbd { font: 600 0.78rem/1 var(--f-mono); border: 1px solid var(--line-2); border-radius: 3px; padding: 1px 4px; }
+
+/* comparison */
+.compare { display: grid; gap: 14px; }
+.compare > p { max-width: 68ch; color: var(--ink-2); }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.trio figure { margin: 0; display: grid; gap: 8px; align-content: start; }
+.crop { position: relative; overflow: hidden; aspect-ratio: 4 / 3; border-radius: 6px; background: var(--plate); max-width: 100%; }
+.crop img { position: absolute; max-width: none; width: 4096px; height: 2048px; image-rendering: pixelated; }
+figcaption { font-size: 0.92rem; color: var(--ink-2); }
+figcaption strong { display: block; font-family: var(--f-display); font-size: 1.02rem; color: var(--ink); }
+.tag { font: 600 0.7rem/1 var(--f-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); margin-left: 6px; }
+
+/* notes */
+.notes { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; border-top: 1px solid var(--line); padding-top: 28px; }
+.notes > div { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.notes ol, .notes ul { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; color: var(--ink-2); }
+.notes li strong { color: var(--ink); }
+.notes h2 + ul, .notes h2 + ol { margin-top: 2px; }
+.notes ul + h2 { margin-top: 16px; }
+.num { font-variant-numeric: tabular-nums; }
+footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.85rem; color: var(--ink-3); }
+
+@media (max-width: 860px) {
+  .trio, .notes { grid-template-columns: minmax(0, 1fr); }
+  .map { aspect-ratio: 1 / 1; }
+  .looks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .looks label { text-align: center; padding: 6px 4px; font-size: 0.84rem; line-height: 1.25; }
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Robonn · Isometric Bonn · Phase 0a test</p>
+    <h1>Isometric Poppelsdorf</h1>
+    <p class="lede">{{area_km2}}&nbsp;km² of Bonn drawn as isometric pixel art from the state's open 3D data, by fixed rules on one laptop. Poppelsdorfer Schloss and its garden sit in the middle, Campus Poppelsdorf to the left.</p>
+  </header>
+
+  <section class="viewer" aria-label="Map">
+    <div class="strip">
+      <fieldset class="looks">
+        <legend class="sr">Look</legend>
+        <input type="radio" name="look" id="look-ramp" value="ramp" checked><label for="look-ramp">Photo ramps</label>
+        <input type="radio" name="look" id="look-flat" value="flat"><label for="look-flat">Flat colours</label>
+        <input type="radio" name="look" id="look-photo" value="photo"><label for="look-photo">Posterised photo</label>
+      </fieldset>
+      <div class="tools">
+        <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+        <output id="zoom-level" aria-live="polite">1×</output>
+        <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" id="zoom-all">Whole area</button>
+        <label class="toggle" for="show-labels"><input type="checkbox" id="show-labels" checked> Labels</label>
+      </div>
+    </div>
+    <div class="map" id="map" tabindex="0" role="region"
+         aria-label="Map of Poppelsdorf. Arrow keys move, plus and minus zoom, 0 shows the whole area.">
+      <img id="map-img" src="ramp.png" width="{{width}}" height="{{height}}" draggable="false"
+           alt="Isometric pixel-art map of Poppelsdorf in Bonn: Poppelsdorfer Schloss with its round courtyard, the botanic garden with its pond and moat, Poppelsdorfer Allee, Campus Poppelsdorf and the surrounding streets.">
+      <div class="pins" id="pins"></div>
+      <div class="scale" aria-hidden="true"><svg id="scale-bar" width="104" height="54"></svg><span id="scale-text">50 m</span></div>
+    </div>
+    <p class="hint">Drag to move · scroll, pinch or <kbd>+</kbd> <kbd>−</kbd> to zoom · arrow keys pan · {{px_per_m}}&nbsp;pixels per metre, so a 10&nbsp;m house is about 40&nbsp;px wide</p>
+  </section>
+
+  <section class="compare" aria-labelledby="compare-title">
+    <h2 id="compare-title">Three looks, one model</h2>
+    <p>Phase 0a asks five members which look reads as a game rather than a GIS map. All three come from the same render; only the colour rules differ.</p>
+    <div class="trio">
+      <figure>
+        <div class="crop"><img src="ramp.png" alt="Poppelsdorfer Schloss in the photo-ramps look" style="left: calc(50% - 2140px); top: calc(50% - 600px);"></div>
+        <figcaption><strong>Photo ramps<span class="tag">plan default</span></strong>The aerial photo's brightness picks the shade on each material's ramp, so lawns, paths and roof details come from the photo.</figcaption>
+      </figure>
+      <figure>
+        <div class="crop"><img src="flat.png" alt="Poppelsdorfer Schloss in the flat-colours look" style="left: calc(50% - 2140px); top: calc(50% - 600px);"></div>
+        <figcaption><strong>Flat colours</strong>One colour per material, shaded by the sun. The cleanest look, with the least detail.</figcaption>
+      </figure>
+      <figure>
+        <div class="crop"><img src="photo.png" alt="Poppelsdorfer Schloss in the posterised-photo look" style="left: calc(50% - 2140px); top: calc(50% - 600px);"></div>
+        <figcaption><strong>Posterised photo<span class="tag">baseline</span></strong>The aerial photo laid over the 3D model and cut to 32 colours: the GIS look the plan compares against.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="notes">
+    <div>
+      <h2>How it was made</h2>
+      <ol>
+        <li><strong>Fetch.</strong> <span class="num">{{data_files}}</span> files, <span class="num">{{data_mb}}</span>&nbsp;MB, from OpenGeodata.NRW: LoD2 buildings (2026), DGM1 ground heights (2021), nDOM50 heights above ground and the DOP10 aerial photo (both 2025). The script reads robots.txt first.</li>
+        <li><strong>Model.</strong> <span class="num">{{buildings}}</span> buildings in view, <span class="num">{{triangles}}</span> million triangles: roofs and walls from LoD2, ground and tree crowns as 0.5&nbsp;m height meshes. Heights count as trees only where the photo's infrared says plants, so cars and signs drop out.</li>
+        <li><strong>Render.</strong> One fixed pixel grid for all of Bonn at {{px_per_m}}&nbsp;px per metre, camera at 30° looking north-east, rasterised in plain NumPy so a tile comes out the same on any machine. Shadows use the photo's own sun, {{sun_az}}° and {{sun_el}}° high, found by matching its building shadows.</li>
+        <li><strong>Colour.</strong> Rules pick from a <span class="num">{{palette}}</span>-colour palette built on the club's Rhein colours; this view uses <span class="num">{{colours}}</span>. The photo picks the shade on ground and low roofs and each roof's colour family; walls and windows follow the building's use.</li>
+        <li><strong>Tiles.</strong> <span class="num">{{tiles}}</span> tiles of 512&nbsp;px, about <span class="num">{{tile_kb}}</span>&nbsp;KB each as lossless WebP. At that rate all of Bonn, with zoom levels, would need about <span class="num">{{bonn_mb}}</span>&nbsp;MB.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Not there yet</h2>
+      <ul>
+        <li>Water is read from the photo's infrared, a stand-in for the state's water polygons. The lily pond beside the Schloss is missed.</li>
+        <li>Trees are one surface per canopy, without trunks or single-tree sprites.</li>
+        <li>Wall colours and windows are invented from each building's use. Roofs, ground, trees and heights are measured.</li>
+        <li>No landmarks or robots drawn by members yet.</li>
+      </ul>
+      <h2>Checked</h2>
+      <ul>
+        <li>The Schloss tile rendered on its own matches the same tile in this window, byte for byte: no seams.</li>
+        <li>Every pixel of the two pixel-art looks is a palette colour, also zoomed out.</li>
+        <li>The data reader never reads addresses, and a test confirms none get through.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Data: Geobasis NRW, Datenlizenz Deutschland Zero 2.0. Reference: Isometric NYC. Robonn, the robotics club at Universität Bonn · rendered 2026-11-11.</footer>
+</div>
+
+<script>
+(() => {
+  const W = {{width}}, H = {{height}};
+  const LABELS = {{labels}};
+  const LEVELS = [0.5, 1, 2, 3, 4];
+  const map = document.getElementById("map");
+  const img = document.getElementById("map-img");
+  const pins = document.getElementById("pins");
+  const level = document.getElementById("zoom-level");
+  const btnIn = document.getElementById("zoom-in");
+  const btnOut = document.getElementById("zoom-out");
+  const bar = document.getElementById("scale-bar");
+  const barText = document.getElementById("scale-text");
+
+  let look = "ramp";
+  let li = 1;
+  const start = LABELS.length ? LABELS[0] : { x: W / 2, y: H / 2 };
+  let cx = start.x, cy = start.y + 90;
+
+  for (const l of LABELS) {
+    const p = document.createElement("span");
+    p.className = "pin";
+    p.textContent = l.name;
+    pins.appendChild(p);
+  }
+
+  function draw() {
+    cx = Math.min(Math.max(cx, 0), W);
+    cy = Math.min(Math.max(cy, 0), H);
+    const z = LEVELS[li], vw = map.clientWidth, vh = map.clientHeight;
+    const src = (z < 1 ? look + "-half" : look) + ".png";
+    if (img.getAttribute("src") !== src) img.setAttribute("src", src);
+    const left = Math.round(vw / 2 - cx * z), top = Math.round(vh / 2 - cy * z);
+    img.style.width = W * z + "px";
+    img.style.height = H * z + "px";
+    img.style.transform = "translate(" + left + "px," + top + "px)";
+    LABELS.forEach((l, i) => {
+      pins.children[i].style.transform = "translate(" + Math.round(left + l.x * z) + "px," + Math.round(top + l.y * z) + "px)";
+    });
+    level.textContent = (z < 1 ? "½" : z) + "×";
+    btnOut.disabled = li === 0;
+    btnIn.disabled = li === LEVELS.length - 1;
+    // Scale bar: one ground axis is a 2:1 line, {{px_per_m}} px across per metre at 1x.
+    const ppm = {{px_per_m}} * z;
+    const metres = [5, 10, 20, 25, 50, 100, 200].find(m => m * ppm >= 60) || 200;
+    const dx = Math.round(metres * ppm), dy = Math.round(dx / 2);
+    bar.setAttribute("width", dx + 4);
+    bar.setAttribute("height", dy + 4);
+    bar.innerHTML = '<line x1="2" y1="' + (dy + 2) + '" x2="' + (dx + 2) + '" y2="2" stroke="#131313" stroke-width="5" stroke-linecap="square"/>' +
+      '<line x1="2" y1="' + (dy + 2) + '" x2="' + (dx + 2) + '" y2="2" stroke="#ecf1f5" stroke-width="2" stroke-linecap="square"/>';
+    barText.textContent = metres + " m";
+  }
+
+  function zoomTo(n, mx, my) {
+    n = Math.max(0, Math.min(LEVELS.length - 1, n));
+    if (n === li) return;
+    const vw = map.clientWidth, vh = map.clientHeight;
+    if (mx === undefined) { mx = vw / 2; my = vh / 2; }
+    const z0 = LEVELS[li], z1 = LEVELS[n];
+    const px = cx + (mx - vw / 2) / z0, py = cy + (my - vh / 2) / z0;
+    cx = px - (mx - vw / 2) / z1;
+    cy = py - (my - vh / 2) / z1;
+    li = n;
+    draw();
+  }
+
+  function whole() {
+    const vw = map.clientWidth;
+    let n = 0;
+    for (let i = LEVELS.length - 1; i >= 0; i--) if (W * LEVELS[i] <= vw) { n = i; break; }
+    li = n; cx = W / 2; cy = H / 2;
+    draw();
+  }
+
+  btnIn.addEventListener("click", () => zoomTo(li + 1));
+  btnOut.addEventListener("click", () => zoomTo(li - 1));
+  document.getElementById("zoom-all").addEventListener("click", whole);
+  document.getElementById("show-labels").addEventListener("change", e => { pins.hidden = !e.target.checked; });
+  document.querySelectorAll('input[name="look"]').forEach(r => r.addEventListener("change", e => { look = e.target.value; draw(); }));
+
+  const pointers = new Map();
+  let pinchBase = 0;
+  map.addEventListener("pointerdown", e => {
+    map.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    map.classList.add("dragging");
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinchBase = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  });
+  map.addEventListener("pointermove", e => {
+    const prev = pointers.get(e.pointerId);
+    if (!prev) return;
+    const now = { x: e.clientX, y: e.clientY };
+    pointers.set(e.pointerId, now);
+    if (pointers.size === 1) {
+      const z = LEVELS[li];
+      cx -= (now.x - prev.x) / z;
+      cy -= (now.y - prev.y) / z;
+      draw();
+    } else if (pointers.size === 2 && pinchBase > 0) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const r = map.getBoundingClientRect();
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      if (d / pinchBase > 1.45) { zoomTo(li + 1, mx, my); pinchBase = d; }
+      else if (d / pinchBase < 0.69) { zoomTo(li - 1, mx, my); pinchBase = d; }
+    }
+  });
+  const release = e => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchBase = 0;
+    if (pointers.size === 0) map.classList.remove("dragging");
+  };
+  map.addEventListener("pointerup", release);
+  map.addEventListener("pointercancel", release);
+
+  let wheel = 0;
+  map.addEventListener("wheel", e => {
+    e.preventDefault();
+    wheel += e.deltaY;
+    if (Math.abs(wheel) < 60) return;
+    const r = map.getBoundingClientRect();
+    zoomTo(li + (wheel < 0 ? 1 : -1), e.clientX - r.left, e.clientY - r.top);
+    wheel = 0;
+  }, { passive: false });
+  map.addEventListener("dblclick", e => {
+    const r = map.getBoundingClientRect();
+    zoomTo(li + 1, e.clientX - r.left, e.clientY - r.top);
+  });
+  map.addEventListener("keydown", e => {
+    const step = 96 / LEVELS[li];
+    const keys = {
+      ArrowLeft: () => { cx -= step; draw(); }, ArrowRight: () => { cx += step; draw(); },
+      ArrowUp: () => { cy -= step; draw(); }, ArrowDown: () => { cy += step; draw(); },
+      "+": () => zoomTo(li + 1), "=": () => zoomTo(li + 1), "-": () => zoomTo(li - 1), "0": whole,
+    };
+    if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
+  });
+  new ResizeObserver(draw).observe(map);
+  draw();
+})();
+</script>

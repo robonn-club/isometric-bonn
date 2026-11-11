@@ -1,0 +1,36 @@
+# The map's palette: every pixel of every tile is one of these colours (a test checks it).
+#
+# Each material has a ramp, dark to light. Rules pick a step: the aerial photo's brightness
+# on ground and low roofs, the sun on walls and roof slopes, two steps down in shadow.
+# Families start from the Industry Map's Pixel view (grass, trees, paving, glass, stone) and
+# the club's Rhein palette (#ECF1F5 #C1CED9 #485F66 #293740 #131313), which gives the streets
+# their slate blue and the windows their colour.
+
+ramps:
+  # ground
+  grass:   ["#2A4A34", "#355A3F", "#426B4B", "#4F7B55", "#5E8A5E", "#719C67", "#88AF73"]
+  paving:  ["#293740", "#36444D", "#45535B", "#56656C", "#6C7A80", "#869297", "#A2ACAF", "#C1C8C8", "#DADDD7"]
+  soil:    ["#5C4B37", "#6E5A42", "#86704F", "#A08A65", "#BBA67F", "#D3C29A"]
+  water:   ["#2F6A87", "#3A7C9B", "#4F98B8", "#67B2CF", "#8CC8DE"]
+  # trees, lit side up
+  tree:    ["#1B3727", "#244A33", "#2E5B3D", "#3A6E48", "#4A8253", "#5D965E", "#78AC6B"]
+  # roofs, one family per building; grey roofs take their step from the photo's brightness
+  roof_grey:   ["#2C3136", "#3A4046", "#4A5157", "#5C6369", "#70777D", "#878D92", "#A0A5A9", "#BBBFC1"]
+  roof_red:    ["#5A2620", "#76332A", "#934134", "#AD5340", "#C66A51", "#DA8A6A"]
+  roof_brown:  ["#3F2E25", "#553E31", "#6C503F", "#83634F", "#9B7962", "#B39278"]
+  roof_green:  ["#2F4A31", "#3D5D3B", "#4D7046", "#5F8452", "#749860", "#8BAB70"]
+  roof_copper: ["#2F5952", "#3D6F66", "#4E867B", "#659E91", "#80B5A7", "#A1CCBF"]
+  glass:       ["#4E7F91", "#6B9DAE", "#8BBCCB", "#A6D4E1", "#C6E7EF", "#E4F5F8"]
+  # walls: shade side in shadow, shade side, lit side, lit side facing the sun
+  wall_plaster:  ["#857A66", "#A69A82", "#CFC4AA", "#E9E1CB"]   # homes: one of five tints per building
+  wall_ochre:    ["#8A7552", "#AC946A", "#D3BC8E", "#EAD7AE"]
+  wall_rose:     ["#8A6F69", "#AA8C84", "#D2B3A8", "#EBD2C8"]
+  wall_blue:     ["#727D84", "#8E999F", "#B5BFC4", "#D5DDE1"]
+  wall_white:    ["#8E8F8A", "#AEB0AA", "#D8DAD3", "#F1F2EC"]
+  wall_stone:    ["#8A8371", "#ACA48F", "#D2CAB4", "#ECE6D6"]
+  wall_concrete: ["#69757B", "#848F95", "#AAB3B7", "#CDD3D5"]
+  wall_shed:     ["#4A545A", "#5D686E", "#7A858A", "#97A1A5"]
+  window:        ["#293740", "#485F66"]   # Rhein 4 on the shade side, Rhein 3 in the sun
+  outline:       ["#16232A"]
+  trunk:         ["#3D3225", "#55452F"]
+  background:    ["#ECF1F5"]             # Rhein 1, outside the map

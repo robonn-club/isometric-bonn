@@ -1,0 +1,14 @@
+# Phase 0a test area: Poppelsdorf.
+# Poppelsdorfer Schloss and the botanic garden right of centre, Poppelsdorfer Allee leading
+# away to the north-east, Campus Poppelsdorf on the left, Poppelsdorf's streets in front.
+name: poppelsdorf
+title: Poppelsdorf
+center: [365250, 5621000]   # EPSG:25832 metres; the window is centred here, then snapped to 512 px tiles
+size_px: [2048, 1024]       # 4 x 2 map tiles, about 0.5 km2 of ground
+
+# Labels on the demo page: a point on the ground (EPSG:25832) and metres above it.
+labels:
+  - {name: Poppelsdorfer Schloss, at: [365335, 5620992], up: 24}
+  - {name: Botanischer Garten, at: [365425, 5620905], up: 2}
+  - {name: Poppelsdorfer Allee, at: [365462, 5621119], up: 12}
+  - {name: Campus Poppelsdorf, at: [364935, 5621030], up: 20}

@@ -1,0 +1,20 @@
+# All of Bonn: the city polygon from DVG1 (municipality key 05314000), 141 km2.
+# Rendered in windows of 4 x 2 map tiles, each with a few pixels of overlap so the edges
+# match (isobonn city bonn).
+name: bonn
+title: Bonn
+municipality: "05314000"
+window_px: [2048, 1024]
+overlap_px: 4
+
+# Labels: lonlat is WGS84, at is EPSG:25832. With snap: tallest a label moves onto the
+# tallest LoD2 building within radius metres. min_scale hides a label when zoomed further out.
+labels:
+  - {name: Zentrum, lonlat: [7.1022, 50.7353], up: 25}
+  - {name: Bonner Münster, lonlat: [7.1003, 50.7346], snap: tallest, radius: 120, min_scale: 0.0625}
+  - {name: Post Tower, lonlat: [7.1293, 50.7177], snap: tallest, radius: 300, min_scale: 0.0625}
+  - {name: Poppelsdorfer Schloss, at: [365335, 5620992], up: 24, min_scale: 0.0625}
+  - {name: Beuel, lonlat: [7.1260, 50.7385], up: 20}
+  - {name: Bad Godesberg, lonlat: [7.1567, 50.6846], up: 20}
+  - {name: Duisdorf, lonlat: [7.0447, 50.7186], up: 20}
+  - {name: Venusberg, lonlat: [7.1035, 50.6985], up: 30}

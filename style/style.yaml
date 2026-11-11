@@ -1,0 +1,59 @@
+# How the map is rendered and coloured. Change values here, then run `isobonn style <area>`
+# (colours only) or `isobonn render <area>` (geometry, shadows). Colours are in palette.yaml.
+
+camera:
+  px_per_m: 2            # plan default for Bonn; 1.4 is the chunkier alternative
+
+sun:                     # matches the aerial photo's light (DOP10 Bonn, flown 2025-05-01)
+  azimuth: 152.5         # degrees clockwise from north; both values estimated from the photo's
+  elevation: 50          # building shadows by `isobonn sun poppelsdorf` (2026-11-11), which agrees
+                         # with the sun over Bonn that day at about 12:15 CEST (151 deg, 51.5 deg)
+
+render:
+  tree_ndvi: 0.25        # infrared vegetation index above which nDOM heights count as plants
+  tree_min_height: 2.0   # metres above ground; lower plants stay flat ground
+  shadow_texel_m: 0.5
+  shadow_bias_m: 0.3     # between different objects
+  shadow_self_bias_m: 1.5  # within one building or tree canopy
+  shadow_margin_m: 40    # casters this far outside the view still count; height / tan(elevation)
+                         # of the tallest building (Post Tower, 162 m: use 150)
+  crown_base: 0.4        # a crown's edge drops to this share of the tree's height, not to the ground
+  crown_smooth: 1.5      # smoothing of crown shading, in 0.5 m cells
+  water_max_infrared: 45 # open water is near black in infrared (stand-in for Basis-DLM polygons)
+  water_max_ndvi: 0.02
+  water_min_area_m2: 100
+  deck_min_height: 4      # raised structures LoD2 lacks (bridges, overpasses): metres above ground
+  deck_min_width_cells: 7 # and at least this many 0.5 m cells wide, so buses and signs drop out
+  deck_thickness: 1.5     # decks float as slabs this thick, so the river stays visible underneath
+
+# Colour rules (style step only; run `isobonn style <area>`).
+look:
+  shadow_steps: 2          # ramp steps down in sun shadow
+  outline_depth_m: 2.0     # a neighbour this far behind makes a silhouette pixel
+  outline_tree_depth_m: 5.0  # trees: only real silhouettes, not every step down a crown
+  photo_colours: 32        # posterised-photo comparison look
+  ground:
+    grass_ndvi: 0.2
+    soil_min_ndvi: -0.05   # bare ground: warm, bright and not water-dark
+    soil_warmth: 22        # red minus blue
+    soil_min_luma: 105
+    grass_luma: [25, 150]  # photo brightness range spread over the ramp
+    soil_luma: [80, 215]
+    paving_luma: [35, 215]
+    smooth: 3              # median filter on photo brightness, px (1 = off); removes speckle
+  tree:
+    luma: [20, 120]
+  roof:
+    sun_lo: 0.25           # sun on a roof slope, mapped to four steps around the roof's own step
+    sun_hi: 1.0
+    luma: [70, 190]        # a roof's mean photo brightness, spread over its family's ramp
+    white_rg: -1.9         # median red minus green of roofs in DOP10 Bonn 2025 (Poppelsdorf, 805 roofs)
+    warm: 9                # red minus green, after white balance, above which a roof is tile
+    copper: -10            # red minus green below which a cyan-green roof is copper
+    photo_max_height: 12   # metres; taller roofs lean in the photo, so no photo detail
+    photo_step_luma: 28
+  wall:
+    lit: 0.1               # sun on a wall above this: lit side
+    strong: 0.55
+    windows: true
+    home_tints: [wall_plaster, wall_plaster, wall_white, wall_ochre, wall_rose, wall_blue]

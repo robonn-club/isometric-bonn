@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Downloads and renders stay local; only the manifest of what was used is tracked.
+data/*
+!data/manifest.json
+out/

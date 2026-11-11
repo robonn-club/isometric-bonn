@@ -1,0 +1,344 @@
+<title>Isometric Bonn</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one large map plate under a slim instrument strip, notes below. Rhein palette for
+   the chrome, so the map is the only colourful thing on the page. Outfit and Manrope: SIL Open
+   Font License 1.1 (viewer/fonts), inlined so the page makes no third-party requests. */
+@font-face { font-family: "Outfit"; src: url({{font_display}}) format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url({{font_body}}) format("woff2"); font-weight: 200 800; font-display: swap; }
+
+:root {
+  --paper: #ecf1f5;
+  --sunk: #e2e8ed;
+  --ink: #131313;
+  --ink-2: #293740;
+  --ink-3: #485f66;
+  --line: #c1ced9;
+  --line-2: #84969f;
+  --plate: #d5dee5;
+  --chip: rgba(19, 19, 19, 0.82);
+  --chip-ink: #ecf1f5;
+  --f-display: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-body: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131313; --sunk: #1e2529; --ink: #ecf1f5; --ink-2: #c1ced9; --ink-3: #84969f;
+    --line: #293740; --line-2: #485f66; --plate: #1e2529; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #131313; --sunk: #1e2529; --ink: #ecf1f5; --ink-2: #c1ced9; --ink-3: #84969f;
+  --line: #293740; --line-2: #485f66; --plate: #1e2529; color-scheme: dark;
+}
+
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+.page {
+  max-width: 1400px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+  display: grid; gap: 28px;
+}
+h1, h2 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; color: var(--ink); }
+h1 { font-size: clamp(2rem, 1.5rem + 2.4vw, 3rem); line-height: 1.05; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; line-height: 1.2; }
+p { margin: 0; }
+.intro { display: grid; gap: 10px; max-width: 70ch; }
+.eyebrow { font: 600 0.78rem/1.3 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.lede { font-size: 1.06rem; color: var(--ink-2); }
+
+.viewer { display: grid; gap: 10px; }
+.strip { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.strip button {
+  font: 600 0.95rem/1 var(--f-body); color: var(--ink); background: transparent;
+  border: 1px solid var(--line-2); border-radius: 6px; min-width: 36px; height: 34px; padding: 0 10px; cursor: pointer;
+}
+.strip button:hover:not(:disabled) { background: var(--sunk); }
+.strip button:disabled { opacity: 0.4; cursor: default; }
+.strip output { font: 600 0.9rem/1 var(--f-mono); min-width: 4.5ch; text-align: center; font-variant-numeric: tabular-nums; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; color: var(--ink-2); cursor: pointer; }
+.spacer { flex: 1; }
+.where { font: 500 0.82rem/1.2 var(--f-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+
+.map {
+  position: relative; overflow: hidden; background: var(--plate); border-radius: 6px;
+  height: min(72vh, 760px); min-height: 320px; width: 100%; max-width: 100%;
+  cursor: grab; touch-action: none; user-select: none;
+}
+.map.dragging { cursor: grabbing; }
+.map img { position: absolute; left: 0; top: 0; max-width: none; image-rendering: pixelated; pointer-events: none; }
+.pins { position: absolute; inset: 0; pointer-events: none; }
+.pin {
+  position: absolute; left: 0; top: 0; translate: -50% calc(-100% - 7px); white-space: nowrap;
+  font: 600 0.78rem/1 var(--f-body); color: var(--chip-ink); background: var(--chip); padding: 5px 8px; border-radius: 4px;
+}
+.pin::after {
+  content: ""; position: absolute; left: 50%; top: 100%; translate: -50% 0;
+  border: 5px solid transparent; border-top-color: var(--chip);
+}
+.scale { position: absolute; left: 12px; bottom: 10px; pointer-events: none; }
+.scale span {
+  display: inline-block; font: 600 0.75rem/1 var(--f-mono); color: var(--chip-ink);
+  background: var(--chip); padding: 3px 6px; border-radius: 3px; margin-left: 6px;
+}
+.scale svg { display: inline-block; vertical-align: bottom; overflow: visible; }
+.hint { font-size: 0.85rem; color: var(--ink-3); }
+kbd { font: 600 0.78rem/1 var(--f-mono); border: 1px solid var(--line-2); border-radius: 3px; padding: 1px 4px; }
+
+.notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; border-top: 1px solid var(--line); padding-top: 24px; }
+.notes > div { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.notes ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; color: var(--ink-2); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; }
+.facts dt { color: var(--ink-3); font-size: 0.9rem; }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--ink); }
+footer { border-top: 1px solid var(--line); padding-top: 14px; font-size: 0.85rem; color: var(--ink-3); }
+@media (max-width: 900px) { .notes { grid-template-columns: minmax(0, 1fr); } .map { height: 70vh; } }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Robonn · Isometric Bonn · first full render</p>
+    <h1>Isometric Bonn</h1>
+    <p class="lede">All of Bonn, {{area_km2}}&nbsp;km² inside the city boundary, drawn as isometric pixel art from the state's open 3D data by fixed rules on one laptop.</p>
+  </header>
+
+  <section class="viewer" aria-label="Map">
+    <div class="strip">
+      <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+      <output id="zoom-level" aria-live="polite">1×</output>
+      <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+      <button type="button" id="zoom-all">Whole city</button>
+      <label class="toggle" for="show-labels"><input type="checkbox" id="show-labels" checked> Labels</label>
+      <span class="spacer"></span>
+      <span class="where" id="where" aria-live="off"></span>
+    </div>
+    <div class="map" id="map" tabindex="0" role="region"
+         aria-label="Map of Bonn. Arrow keys move, plus and minus zoom, 0 shows the whole city.">
+      <div id="tiles"></div>
+      <div class="pins" id="pins"></div>
+      <div class="scale" aria-hidden="true"><svg id="scale-bar" width="104" height="54"></svg><span id="scale-text">50 m</span></div>
+    </div>
+    <p class="hint">Drag to move · scroll, pinch or <kbd>+</kbd> <kbd>−</kbd> to zoom · arrow keys pan · at 1× a pixel is half a metre, so a 10&nbsp;m house is about 40&nbsp;px wide</p>
+  </section>
+
+  <section class="notes">
+    <div>
+      <h2>The render</h2>
+      <dl class="facts">
+        <dt>Area</dt><dd>{{area_km2}} km² (DVG1 city boundary)</dd>
+        <dt>Buildings</dt><dd>{{buildings}} from LoD2</dd>
+        <dt>Windows</dt><dd>{{windows}} of 2048 × 1024 px</dd>
+        <dt>Render time</dt><dd>{{hours}} h on one laptop's CPU</dd>
+        <dt>Map tiles</dt><dd>{{tiles}} at full size, {{size_mb}} MB with all zoom levels</dd>
+        <dt>Data</dt><dd>{{data_gb}} GB: LoD2, DGM1, nDOM50, DOP10</dd>
+      </dl>
+    </div>
+    <div>
+      <h2>How to read it</h2>
+      <ul>
+        <li>Roofs, ground, trees and heights are measured; wall colours and windows are invented from each building's use.</li>
+        <li>Shadows fall as in the aerial photo, taken around midday on 1 May 2025.</li>
+        <li>The dark line is the city boundary. Neighbouring towns are left blank.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Not there yet</h2>
+      <ul>
+        <li>Water comes from the photo's infrared; small or green ponds are missed, and bridges are only as good as LoD2.</li>
+        <li>Trees are one surface per canopy.</li>
+        <li>No landmarks or robots drawn by members yet.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Data: Geobasis NRW, Datenlizenz Deutschland Zero 2.0. Reference: Isometric NYC. Robonn, the robotics club at Universität Bonn · rendered {{date}}.</footer>
+</div>
+
+<script>
+(() => {
+  const T = {{tile_px}};
+  const URL = "{{url}}";
+  const LEVELS = {{levels}};
+  const BOUNDS = {{bounds}};
+  const LABELS = {{labels}};
+  const PX_PER_M = {{px_per_m}};
+  const START = {{start}};
+  const MAXL = Math.max(...Object.keys(LEVELS).map(Number));
+  const SCALES = [4, 2, 1];
+  for (let l = 1; l <= MAXL; l++) SCALES.push(1 / 2 ** l);
+  const have = {};
+  for (const [l, keys] of Object.entries(LEVELS)) have[l] = new Set(keys);
+
+  const map = document.getElementById("map");
+  const layer = document.getElementById("tiles");
+  const pins = document.getElementById("pins");
+  const level = document.getElementById("zoom-level");
+  const btnIn = document.getElementById("zoom-in");
+  const btnOut = document.getElementById("zoom-out");
+  const bar = document.getElementById("scale-bar");
+  const barText = document.getElementById("scale-text");
+  const where = document.getElementById("where");
+
+  let si = SCALES.indexOf(START.scale) >= 0 ? SCALES.indexOf(START.scale) : 2;
+  let cx = START.x, cy = START.y;
+  const shown = new Map();
+
+  for (const l of LABELS) {
+    const p = document.createElement("span");
+    p.className = "pin";
+    p.textContent = l.name;
+    pins.appendChild(p);
+  }
+
+  function fmt(s) { return s >= 1 ? s + "×" : "1/" + Math.round(1 / s) + "×"; }
+
+  function draw() {
+    cx = Math.min(Math.max(cx, BOUNDS[0]), BOUNDS[2]);
+    cy = Math.min(Math.max(cy, BOUNDS[1]), BOUNDS[3]);
+    const s = SCALES[si];
+    const L = s >= 1 ? 0 : Math.round(Math.log2(1 / s));
+    const k = s * 2 ** L;
+    const vw = map.clientWidth, vh = map.clientHeight;
+    const left = Math.round(vw / 2 - (cx / 2 ** L) * k);
+    const top = Math.round(vh / 2 - (cy / 2 ** L) * k);
+    const size = T * k;
+    const x0 = Math.floor(-left / size), x1 = Math.floor((vw - left) / size);
+    const y0 = Math.floor(-top / size), y1 = Math.floor((vh - top) / size);
+    const used = new Set();
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const name = x + "_" + y;
+        if (!have[L] || !have[L].has(name)) continue;
+        const key = L + "/" + name;
+        used.add(key);
+        let img = shown.get(key);
+        if (!img) {
+          img = document.createElement("img");
+          img.alt = "";
+          img.decoding = "async";
+          img.src = URL.replace("{z}", L).replace("{x}", x).replace("{y}", y);
+          layer.appendChild(img);
+          shown.set(key, img);
+        }
+        img.style.width = img.style.height = size + "px";
+        img.style.transform = "translate(" + (left + x * size) + "px," + (top + y * size) + "px)";
+      }
+    }
+    for (const [key, img] of shown) if (!used.has(key)) { img.remove(); shown.delete(key); }
+    LABELS.forEach((l, i) => {
+      const pin = pins.children[i];
+      pin.hidden = s < (l.min || 0);
+      pin.style.transform = "translate(" + Math.round(left + (l.x / 2 ** L) * k) + "px," + Math.round(top + (l.y / 2 ** L) * k) + "px)";
+    });
+    level.textContent = fmt(s);
+    btnOut.disabled = si === SCALES.length - 1;
+    btnIn.disabled = si === 0;
+    const ppm = PX_PER_M * s;
+    const metres = [5, 10, 20, 25, 50, 100, 200, 500, 1000, 2000, 5000].find(m => m * ppm >= 60) || 5000;
+    const dx = Math.round(metres * ppm), dy = Math.round(dx / 2);
+    bar.setAttribute("width", dx + 4);
+    bar.setAttribute("height", dy + 4);
+    bar.innerHTML = '<line x1="2" y1="' + (dy + 2) + '" x2="' + (dx + 2) + '" y2="2" stroke="#131313" stroke-width="5" stroke-linecap="square"/>' +
+      '<line x1="2" y1="' + (dy + 2) + '" x2="' + (dx + 2) + '" y2="2" stroke="#ecf1f5" stroke-width="2" stroke-linecap="square"/>';
+    barText.textContent = metres >= 1000 ? metres / 1000 + " km" : metres + " m";
+    const near = LABELS.reduce((b, l) => {
+      const d = Math.hypot(l.x - cx, l.y - cy);
+      return d < b.d ? { d, n: l.name } : b;
+    }, { d: Infinity, n: "" });
+    where.textContent = near.n && near.d < 4000 ? "near " + near.n : "";
+  }
+
+  function zoomTo(n, mx, my) {
+    n = Math.max(0, Math.min(SCALES.length - 1, n));
+    if (n === si) return;
+    const vw = map.clientWidth, vh = map.clientHeight;
+    if (mx === undefined) { mx = vw / 2; my = vh / 2; }
+    const s0 = SCALES[si], s1 = SCALES[n];
+    const px = cx + (mx - vw / 2) / s0, py = cy + (my - vh / 2) / s0;
+    cx = px - (mx - vw / 2) / s1;
+    cy = py - (my - vh / 2) / s1;
+    si = n;
+    draw();
+  }
+
+  function whole() {
+    const vw = map.clientWidth, vh = map.clientHeight;
+    const w = BOUNDS[2] - BOUNDS[0], h = BOUNDS[3] - BOUNDS[1];
+    si = SCALES.findIndex(s => w * s <= vw && h * s <= vh);
+    if (si < 0) si = SCALES.length - 1;
+    cx = (BOUNDS[0] + BOUNDS[2]) / 2;
+    cy = (BOUNDS[1] + BOUNDS[3]) / 2;
+    draw();
+  }
+
+  btnIn.addEventListener("click", () => zoomTo(si - 1));
+  btnOut.addEventListener("click", () => zoomTo(si + 1));
+  document.getElementById("zoom-all").addEventListener("click", whole);
+  document.getElementById("show-labels").addEventListener("change", e => { pins.hidden = !e.target.checked; });
+
+  const pointers = new Map();
+  let pinchBase = 0;
+  map.addEventListener("pointerdown", e => {
+    map.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    map.classList.add("dragging");
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinchBase = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  });
+  map.addEventListener("pointermove", e => {
+    const prev = pointers.get(e.pointerId);
+    if (!prev) return;
+    const now = { x: e.clientX, y: e.clientY };
+    pointers.set(e.pointerId, now);
+    if (pointers.size === 1) {
+      const s = SCALES[si];
+      cx -= (now.x - prev.x) / s;
+      cy -= (now.y - prev.y) / s;
+      draw();
+    } else if (pointers.size === 2 && pinchBase > 0) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const r = map.getBoundingClientRect();
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      if (d / pinchBase > 1.45) { zoomTo(si - 1, mx, my); pinchBase = d; }
+      else if (d / pinchBase < 0.69) { zoomTo(si + 1, mx, my); pinchBase = d; }
+    }
+  });
+  const release = e => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchBase = 0;
+    if (pointers.size === 0) map.classList.remove("dragging");
+  };
+  map.addEventListener("pointerup", release);
+  map.addEventListener("pointercancel", release);
+  let wheel = 0;
+  map.addEventListener("wheel", e => {
+    e.preventDefault();
+    wheel += e.deltaY;
+    if (Math.abs(wheel) < 60) return;
+    const r = map.getBoundingClientRect();
+    zoomTo(si + (wheel > 0 ? 1 : -1), e.clientX - r.left, e.clientY - r.top);
+    wheel = 0;
+  }, { passive: false });
+  map.addEventListener("dblclick", e => {
+    const r = map.getBoundingClientRect();
+    zoomTo(si - 1, e.clientX - r.left, e.clientY - r.top);
+  });
+  map.addEventListener("keydown", e => {
+    const step = 120 / SCALES[si];
+    const keys = {
+      ArrowLeft: () => { cx -= step; draw(); }, ArrowRight: () => { cx += step; draw(); },
+      ArrowUp: () => { cy -= step; draw(); }, ArrowDown: () => { cy += step; draw(); },
+      "+": () => zoomTo(si - 1), "=": () => zoomTo(si - 1), "-": () => zoomTo(si + 1), "0": whole,
+    };
+    if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
+  });
+  new ResizeObserver(draw).observe(map);
+  draw();
+})();
+</script>

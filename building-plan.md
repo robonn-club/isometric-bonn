@@ -1,15 +1,17 @@
-# Building plan: isometric map of Bonn, then NRW
+# Building plan: isometric map of Bonn
 
-Status: approved 2026-11-07. Nothing is built yet. Sizes marked "measured" come from the NRW
-download indexes on 2026-11-07. Times, tile sizes and the final look are estimates until Phases 0
-and 1 test them.
+Status: approved 2026-11-07. On 2026-11-11 the scope was cut to Bonn only; the NRW stages are
+dropped (their sizing is in this file's history, `daba8c0`). A Phase 0a prototype of Poppelsdorf
+exists since 2026-11-11 (see [Prototype](#prototype-2026-11-11)). Sizes marked "measured" come from
+the NRW download indexes on 2026-11-07. Times and the final look are estimates until Phases 0 and 1
+test them.
 
 ## Context
 
-Robonn wants a zoomable isometric pixel-art map in the spirit of
-[Isometric NYC](https://isometric.nyc), first of Bonn and then of all NRW. It serves the Year 1
-goal of making the club visible, gives members something they can add to by hand, and puts the
-region's robotics sites on a map people want to explore.
+Robonn wants a zoomable isometric pixel-art map of Bonn in the spirit of
+[Isometric NYC](https://isometric.nyc). It serves the Year 1 goal of making the club visible, gives
+members something they can add to by hand, and puts the city's robotics sites on a map people want
+to explore.
 
 Decisions Kaya made on 2026-11-07:
 
@@ -19,6 +21,7 @@ Decisions Kaya made on 2026-11-07:
   comes through; otherwise a rule-based pixel style ships, rendered on the club laptop.
 - **Form:** a standalone site, linked from robonn.de and the Industry Map like the other projects.
   Isometric coordinates don't fit the Industry Map's geographic basemap.
+- **Scope (2026-11-11):** Bonn only. No NRW overview and no other cities.
 
 ## Approach
 
@@ -36,15 +39,15 @@ data and turns it into pixel art with fixed rules, on the club laptop:
 - **Charm and community:** landmarks and robots drawn by members as sprites.
 - **AI:** a later upgrade, only if a free GPU turns up.
 
-| | Isometric NYC | Isometric Bonn |
-|---|---|---|
-| 3D source | Google Photorealistic 3D Tiles | NRW open data, licence `dl-de/zero-2-0` (no conditions) |
-| Pixel style | Image model on a rented H100 | Fixed rules on the laptop's RTX 4050; AI optional |
-| Seams between tiles | Placement rules and manual fixes | None by construction: every pixel is computed from world coordinates |
-| Water and trees | The hardest cases, fixed by hand | Water from polygons, trees shaped by measured heights |
-| Accuracy | The model can invent things | Every building is real, with standardised roof shapes; only windows and wall colours are invented |
-| Re-render | Paid, and results change | Free and repeatable |
-| **Where it's weaker** | Rich, hand-painted detail | **A more systematic look. Phase 0 tests whether it's good enough.** |
+|                             | Isometric NYC                    | Isometric Bonn                                                                                    |
+| --------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 3D source                   | Google Photorealistic 3D Tiles   | NRW open data, licence `dl-de/zero-2-0` (no conditions)                                         |
+| Pixel style                 | Image model on a rented H100     | Fixed rules on the laptop's RTX 4050; AI optional                                                 |
+| Seams between tiles         | Placement rules and manual fixes | None by construction: every pixel is computed from world coordinates                              |
+| Water and trees             | The hardest cases, fixed by hand | Water from polygons, trees shaped by measured heights                                             |
+| Accuracy                    | The model can invent things      | Every building is real, with standardised roof shapes; only windows and wall colours are invented |
+| Re-render                   | Paid, and results change         | Free and repeatable                                                                               |
+| **Where it's weaker** | Rich, hand-painted detail        | **A more systematic look. Phase 0 tests whether it's good enough.**                         |
 
 Expect the same family as Isometric NYC (isometric, pixel art, zoomable from city to single
 building), but closer to a clean miniature city than to its painted richness.
@@ -62,19 +65,19 @@ All from [opengeodata.nrw.de](https://www.opengeodata.nrw.de/produkte/geobasis/)
 so nothing needs reprojecting. Tile layers come as 1 km squares, such as
 `LoD2_32_365_5622_1_NW.gml`.
 
-| Layer | What it gives us | Bonn, 14 × 16 km box (measured) | All NRW (measured) | Licence |
-|---|---|---|---|---|
-| LoD2 CityGML | Buildings with roof shapes; roofs and walls are separate surfaces | 3.57 GB | 219.6 GB | zero |
-| DGM1 GeoTIFF | Bare-ground height, 1 m grid | 0.48 GB | 78.8 GB | zero family; confirm from `dgm1_meta.zip` |
-| nDOM50 GeoTIFF | Height above ground, 50 cm grid: trees, bridges, anything LoD2 lacks | 3.59 GB | 574.7 GB | zero |
-| DOP10 JP2 | Aerial photo, 10 cm, with an infrared band: brightness, and plants versus paving | 5.61 GB | 1,174.6 GB | zero |
-| Basis-DLM Shape | Water polygons; also forests and land use for the NRW overview | 4.69 GB, one statewide file | same file | zero |
-| DVG1 Shape | City and state boundaries | 0.02 GB, one statewide file | same file | zero |
+| Layer           | What it gives us                                                                 | Bonn, 14 × 16 km box (measured) | Licence                                     |
+| --------------- | -------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------- |
+| LoD2 CityGML    | Buildings with roof shapes; roofs and walls are separate surfaces                | 3.57 GB                          | zero                                        |
+| DGM1 GeoTIFF    | Bare-ground height, 1 m grid                                                     | 0.48 GB                          | zero family; to confirm (see `SOURCES.md`) |
+| nDOM50 GeoTIFF  | Height above ground, 50 cm grid: trees, bridges, anything LoD2 lacks             | 3.59 GB                          | zero; to confirm                            |
+| DOP10 JP2       | Aerial photo, 10 cm, with an infrared band: brightness, and plants versus paving | 5.61 GB                          | zero; to confirm                            |
+| Basis-DLM Shape | Water polygons                                                                   | 4.69 GB, one statewide file      | zero                                        |
+| DVG1 Shape      | City boundary                                                                    | 0.02 GB, one statewide file      | zero                                        |
 
-Bonn needs about 18 GB, which fits the 88 GB free on the laptop. NRW needs about 2 TB, which
-doesn't, so it uses lighter sources (Phase 4). Bonn's sources line up well: all 224 DOP10 tiles and
-196 of 224 nDOM50 tiles are from 2025, and the three photo tiles checked were flown on 2025-05-01,
-when trees should be in leaf.
+Bonn needs about 18 GB, which fits the 88 GB free on the laptop. Bonn's sources line up well: all
+224 DOP10 tiles and 196 of 224 nDOM50 tiles are from 2025, and the three photo tiles checked were
+flown on 2025-05-01, when trees should be in leaf (the four Poppelsdorf tiles too, per
+`dop_meta.zip`).
 
 Deliberately left out of the main pipeline:
 
@@ -89,29 +92,26 @@ Deliberately left out of the main pipeline:
 **Automated access.** Every script reads a host's robots.txt first and obeys it, whatever User-Agent
 it sends. As read on 2026-11-07:
 
-| Host | robots.txt | Use in this plan |
-|---|---|---|
-| `www.opengeodata.nrw.de` | Empty, so nothing is disallowed | All bulk downloads |
-| `www.wms.nrw.de` | None | Phase 4 brightness, after the heads-up to Geobasis NRW |
-| `www.gis.nrw.de` (3D-Mesh stream) | Disallows everything | Not used, unless Geobasis NRW agrees |
-| `ckan.open.nrw.de` | Disallows `/api/` | Dataset pages only, read by a person |
+| Host                                | robots.txt                      | Use in this plan                                       |
+| ----------------------------------- | ------------------------------- | ------------------------------------------------------ |
+| `www.opengeodata.nrw.de`          | Empty, so nothing is disallowed | All bulk downloads                                     |
+| `www.wms.nrw.de`                  | None                            | Not used (it was for the NRW overview)                 |
+| `www.gis.nrw.de` (3D-Mesh stream) | Disallows everything            | Not used, unless Geobasis NRW agrees                   |
+| `ckan.open.nrw.de`                | Disallows `/api/`             | Dataset pages only, read by a person                   |
 
-## Scale, and why NRW is staged
+## Scale
 
 Detail is measured in pixels per metre along the view's 2:1 axes. A tile is 512 × 512 px, so
 tiles = area in m² × (px/m)² ÷ 262,144. Lower zoom levels add about a third more files.
 
-| px/m | 10 m house is | Bonn city, 141 km² | All NRW, 34,110 km² | Note |
-|---|---|---|---|---|
-| 2.8 | ~57 px wide | ~4,300 tiles | ~1,040,000 tiles | Isometric NYC's level (~32,000 tiles in total); likely more than these rules can fill |
-| **2** | **~40 px wide** | **~2,150 tiles** | ~520,000 tiles | **Default for Bonn and for cities** |
-| 1.4 | ~28 px wide | ~1,050 tiles | ~255,000 tiles | Compared in Phase 0: chunkier pixels may read better |
-| **0.5** | **~10 px wide** | ~135 tiles | **~32,500 tiles** | **Default for the NRW overview** |
-| 0.25 | ~5 px wide | ~35 tiles | ~8,100 tiles | Fallback if free hosting runs short |
+| px/m    | 10 m house is   | Bonn city, 141 km² | Note                                                                                  |
+| ------- | --------------- | ------------------ | ------------------------------------------------------------------------------------- |
+| 2.8     | ~57 px wide     | ~4,300 tiles       | Isometric NYC's level (~32,000 tiles in total); likely more than these rules can fill |
+| **2**   | **~40 px wide** | **~2,150 tiles**   | **Default**                                                                           |
+| 1.4     | ~28 px wide     | ~1,050 tiles       | Compared in Phase 0: chunkier pixels may read better                                  |
+| 0.5     | ~10 px wide     | ~135 tiles         | Fallback if free hosting runs short                                                   |
 
-NRW at Isometric NYC's detail would be 32 times that whole project, so it can't be one job. Every
-scale in use must be a power of 2 apart, so all regions share one pixel grid and line up exactly.
-If Phase 0 picks 1.4 px/m for cities, the overview moves to 0.7 or 0.35 px/m.
+All of Bonn uses one scale and one pixel grid; zoomed-out levels halve it.
 
 ## Pipeline
 
@@ -153,7 +153,7 @@ fetch > normalise > render data layers > stylise > add sprites > zoom levels > v
 7. **Viewer.** Static page with no build step on Leaflet with `CRS.Simple`, the club's existing map
    library, vendored here. Whole-step zoom and `image-rendering: pixelated` keep every pixel even. The
    cost is stepped zoom rather than Isometric NYC's smooth zoom; OpenSeadragon is the fallback if it feels
-   wrong. Each region is its own tile layer, so cities can be added one at a time and hosted separately.
+   wrong. Bonn is one tile layer.
    Deep links, self-hosted Outfit and Manrope, no API keys, no analytics, no third-party requests.
 8. **Publish.** Tiles never enter git. They go into a GitHub Release as one archive, and a manually started
    workflow unpacks them beside the viewer and deploys to GitHub Pages, using the same deploy actions as
@@ -189,16 +189,13 @@ checks it against the Pixel view's colours, so the two read as related.
 Week counts are estimates for one person at about 10 hours a week. W45's focus is backing up existing work,
 so Phase 0 starts in W46 at the earliest. Steady work would put the Bonn launch around February 2027.
 
-| Phase | Work | Done when | Estimate |
-|---|---|---|---|
-| **0a. First picture** | Poppelsdorf, 1 km²: buildings and terrain in three looks side by side: flat material colours, photo brightness on material ramps, and a plain posterised photo as the comparison. No windows, water, trees, sprites or viewer. Kaya asks three members to draw one landmark each and asks the university's HPC team about free GPU use. | 3 of 5 members vote "game", not "GIS", for one look. | 2–3 evenings |
-| **0b. Hard sites** | Altstadt, Bundesviertel with Post Tower, Kennedybrücke and Beuel, Venusberg and Kottenforst, a suburb. Add the height mesh, shadows, water and windows. Compare 2 with 1.4 px/m. Encode sample tiles to check size. | Members recognise the forest, suburb, bridge and tower. The seam test passes. One member's sprite is merged. | 1–2 weeks |
-| **1. One district live** | About 10 km² from Altstadt to Poppelsdorf, end to end through publish. Test the deploy first with dummy files of Bonn's projected size. | A credited public link works on phone and laptop. KB per tile and tiles per second are measured, with all Bonn projected under 1 GB. Kaya can deploy in 15 minutes. | 2 weeks |
-| **2. All Bonn** | City polygon from DVG1 with its edge drawn as a clear border, plus fixes from Phase 1. | Every km² reviewed by a member, with open bugs filed as issues with deep links. A rebuild from saved inputs matches tile hashes. The full deploy finishes inside Pages' 10-minute limit. | 2–3 weeks |
-| **3. Landmarks, pins, robots, launch** | About 10 landmark sprites, Industry Map pins, robot scenes, a sprite-drawing evening. | Linked from robonn.de, with landmarks from at least 3 contributors. | 3 weeks |
-| **4a. Köln region** | All of Regierungsbezirk Köln (Bonn, Köln, Aachen; about 7,400 km²) at 0.5 px/m, about 7,000 tiles. Tests the NRW method at a size that should fit one Pages site. | Bonn sits inside it, lined up exactly. KB per tile measured. | 3 weeks |
-| **4b. All NRW** | The other four regions, with sector landmarks such as Duisburg's port, wind farms and research farms. Free hosting decided first. | The whole state pans and zooms within the host's limits. | 3–4 weeks |
-| **5. NRW cities** | Cities added one at a time at 2 px/m, in order of Industry Map coverage and member interest. Köln city first, about 6,200 tiles. | The first city renders in one weekend. Then open-ended, until free hosting or interest runs out. | Per city |
+| Phase                                        | Work                                                                                                                                                                                                                                                                                                                                     | Done when                                                                                                                                                                                 | Estimate      |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| **0a. First picture**                  | Poppelsdorf, 1 km²: buildings and terrain in three looks side by side: flat material colours, photo brightness on material ramps, and a plain posterised photo as the comparison. No windows, water, trees, sprites or viewer. Kaya asks three members to draw one landmark each and asks the university's HPC team about free GPU use. | 3 of 5 members vote "game", not "GIS", for one look.                                                                                                                                      | 2–3 evenings |
+| **0b. Hard sites**                     | Altstadt, Bundesviertel with Post Tower, Kennedybrücke and Beuel, Venusberg and Kottenforst, a suburb. Add the height mesh, shadows, water and windows. Compare 2 with 1.4 px/m. Encode sample tiles to check size.                                                                                                                     | Members recognise the forest, suburb, bridge and tower. The seam test passes. One member's sprite is merged.                                                                              | 1–2 weeks    |
+| **1. One district live**               | About 10 km² from Altstadt to Poppelsdorf, end to end through publish. Test the deploy first with dummy files of Bonn's projected size.                                                                                                                                                                                                 | A credited public link works on phone and laptop. KB per tile and tiles per second are measured, with all Bonn projected under 1 GB. Kaya can deploy in 15 minutes.                       | 2 weeks       |
+| **2. All Bonn**                        | City polygon from DVG1 with its edge drawn as a clear border, plus fixes from Phase 1.                                                                                                                                                                                                                                                   | Every km² reviewed by a member, with open bugs filed as issues with deep links. A rebuild from saved inputs matches tile hashes. The full deploy finishes inside Pages' 10-minute limit. | 2–3 weeks    |
+| **3. Landmarks, pins, robots, launch** | About 10 landmark sprites, Industry Map pins, robot scenes, a sprite-drawing evening.                                                                                                                                                                                                                                                    | Linked from robonn.de, with landmarks from at least 3 contributors.                                                                                                                       | 3 weeks       |
 
 If Phase 0 fails after one more style round, Kaya chooses between three options: try the AI upgrade if a free
 GPU exists, hand-pixel a smaller hero area, or stop. The loss at that point is about two weeks of volunteer
@@ -222,25 +219,50 @@ time and no money.
 - **Launch edits:** the project lists in `website/src/index.njk:123-153`, the shared footer and the other pages
   that repeat those links.
 
-### Phase 4 details
+## Prototype, 2026-11-11
 
-- **Sources stay light.** At 0.5 px/m the overview tries LoD1 flat-roof buildings (91.8 GB; licence to confirm)
-  with DGM1 and Basis-DLM, about 175 GB downloaded and discarded per km² over several nights. Brightness comes
-  from the state's orthophoto WMS at 2 m per pixel (about 36,000 requests and 6 GB, estimated) instead of 1.17 TB
-  of full-resolution photos. Forests come from Basis-DLM polygons instead of 575 GB of nDOM50. Derived data
-  should stay under 50 GB (estimate).
-- **Be polite to the state's servers.** Kaya sends Geobasis NRW a short heads-up before bulk downloads.
-- **Hosting decision, using the size measured in Phase 4a.** The whole overview likely exceeds GitHub Pages' 1 GB
-  site limit. Options to compare then:
-  - one site per Regierungsbezirk, on GitHub Pages (1 GB each) or Cloudflare Pages (20,000 files each; its terms
-    on image-heavy sites need checking);
-  - Cloudflare R2's free tier (10 GB, no egress fees; sources conflict on whether a card must be on file, which is
-    Kaya's call);
-  - the existing Hetzner webspace, if its quota allows;
-  - dropping the overview to 0.25 px/m (about 8,100 tiles).
-- **What zooming looks like.** Past the overview's detail, areas outside a detailed city show bigger pixels. A
-  city's edge is drawn as a clear outline, so a detailed city reads as "unlocked". That also gives members a reason
-  to unlock the next one.
+A first Phase 0a run on 0.52 km² of Poppelsdorf (the Schloss, the botanic garden, the Allee and part of
+Campus Poppelsdorf), end to end from download to tiles and a comparison page. Code in `src/isometric_bonn/`,
+the area in `areas/poppelsdorf.yaml`, the rules in `style/`. What it showed:
+
+- **Renderer.** A plain NumPy rasteriser stands in for `moderngl`: no GPU, driver or JIT, and the same
+  bytes on any machine. The window renders in about 40 s on the laptop's CPU, so all of Bonn (about 270
+  such windows) would take about 3 hours. The GPU path is needed only if that becomes too slow.
+- **Seams.** The seam test passes on real data: the Schloss tile rendered on its own equals the same tile
+  cut from the full window, byte for byte (`tests/test_seams_real_data.py`).
+- **Parts of 0b came early,** because the picture needed them: hard shadows, windows by function, tree
+  crowns from nDOM50 kept only where the infrared says plants (crowns float above the ground, so they don't
+  melt into curtains), and water from the photo's infrared as a stand-in for Basis-DLM. The stand-in misses
+  the green lily pond and needs the shadow test to skip dark streets.
+- **Sun.** Estimated from the photo's own building shadows (`isobonn sun`): azimuth 152.5°, elevation 50°.
+  That is Bonn's sun at about 12:15 CEST on 2025-05-01, the flight date `dop_meta.zip` gives for these tiles.
+- **Roof lean.** `dop_meta.zip` says the photos are rectified on the image-based surface model (`bDOM`), so
+  roofs should sit on their footprints. The 12 m limit for roof photo detail stays until the Bundesviertel test.
+- **Roofs.** 804 of 923 roofs here are neutral grey, so a grey roof takes its shade from its own brightness;
+  red, brown, green, copper and glass families cover the rest. Roof colours are measured in world space, so a
+  building looks the same in every tile.
+- **Size.** Tiles average 47 KB as lossless WebP, so all of Bonn with zoom levels comes to about 133 MB. That is
+  dense streets; forest is still to measure.
+- **Licences.** The products' metadata files carry no licence field, so DGM1, nDOM50 and DOP10 stay "to
+  confirm" in `SOURCES.md`.
+- **Still open for 0a:** the members' vote on the three looks (`isobonn demo poppelsdorf` builds the page), the
+  1.4 px/m comparison, and Kaya's requests to three members and to the HPC team.
+
+**All of Bonn, the same day** (Kaya: "Cover Bonn"). `isobonn city bonn` rendered the whole DVG1 city polygon, ahead
+of Phases 1 and 2 and before the 0a vote, in the plan-default look:
+
+- 141 km², 131,746 LoD2 buildings, 338 windows of 2048 × 1024 px, 1.65 CPU hours (about 50 minutes on two
+  workers). Data: 989 files, 14.6 GB.
+- 2,293 tiles at full size (113 MB, 49 KB each) and 169 MB with all eight zoom levels, so GitHub Pages' 1 GB holds
+  it with room to spare.
+- Each window renders with 4 px of overlap that is cropped, and ground, trees and buildings outside the boundary
+  are left out, so the city is one piece of land with a dark edge line. A second seam test on real data checks
+  two overlapping windows at the centre.
+- Bridges: LoD2 has none, so raised structures from nDOM50 (over 4 m, not plants, wider than a bus) become
+  floating decks; the Kennedybrücke and the station's platform roofs come out right, and ships turn into small
+  decks. The Rhine is found by its infrared, which works well.
+- Not yet reviewed by members (Phase 2's "every km² reviewed"), no deploy (Phase 1), and the look is still the
+  0a candidate.
 
 ## Optional AI upgrade
 
@@ -261,21 +283,20 @@ Image model with quantisation; community guides claim less, so test it). Nothing
 
 ## Risks
 
-| Risk | Earliest signal | Response |
-|---|---|---|
-| It reads as a posterised GIS render, not pixel art | 0a vote | Another of the three looks, one more style round, then the three options above |
-| Nobody draws sprites | 0a request to three members | A smaller landmark set from the core team; generated sprites in the Pixel view's manner; AI drafts if a GPU comes |
-| Volunteer time runs out | Phase 1 slips past 4 weeks | Bonn alone is a complete result; NRW stays optional |
-| Forests and suburbs look dull | 0b sites | More ramp steps; tree sprites |
-| The height mesh gives melted trees, or noise on streets and water | 0b Kottenforst and Kennedybrücke | Filtering; forests stay as mesh, open-ground trees become sprites at nDOM50 peaks, with infrared filtering out trucks and cranes |
-| The bridge deck is wrong in the height mesh | 0b Kennedybrücke | Hand-built deck using DGM1 and nDOM50 heights |
-| DOP10 roofs lean away from their footprints, so roof detail picks up walls or ground | 0b Bundesviertel | Tall roofs take a flat colour family and no photo brightness |
-| Windows look messy on walls that don't follow the pixel grid | 0b sites | Simplify them, or drop them on those walls |
-| Basis-DLM polygons are too coarse or don't line up | 0b Kennedybrücke | Cadastre land use (`lk/akt/gru_vereinfacht_gpkg`, licence zero, parcels without owners) |
-| Headless rendering fails on the laptop's two GPUs | First hour of 0a | Mesa on the CPU (slower), or headless three.js at the cost of Chromium's memory |
-| Bonn exceeds 1 GB on GitHub Pages | 0b sample, then Phase 1 | Lower px/m, or crop to the city polygon |
-| The laptop is short on memory (about 3 GB free when checked) | 0a | Work one km² at a time; run while other jobs are stopped |
-| NRW photos span 2022 to 2026, so brightness jumps at flight-block edges | Phase 4a | Colour ramps limit this; match brightness per block and accept what remains |
+| Risk                                                                                 | Earliest signal                   | Response                                                                                                                         |
+| ------------------------------------------------------------------------------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| It reads as a posterised GIS render, not pixel art                                   | 0a vote                           | Another of the three looks, one more style round, then the three options above                                                   |
+| Nobody draws sprites                                                                 | 0a request to three members       | A smaller landmark set from the core team; generated sprites in the Pixel view's manner; AI drafts if a GPU comes                |
+| Volunteer time runs out                                                              | Phase 1 slips past 4 weeks        | One live district is already a result; grow district by district                                                                 |
+| Forests and suburbs look dull                                                        | 0b sites                          | More ramp steps; tree sprites                                                                                                    |
+| The height mesh gives melted trees, or noise on streets and water                    | 0b Kottenforst and Kennedybrücke | Filtering; forests stay as mesh, open-ground trees become sprites at nDOM50 peaks, with infrared filtering out trucks and cranes |
+| The bridge deck is wrong in the height mesh                                          | 0b Kennedybrücke                 | Hand-built deck using DGM1 and nDOM50 heights                                                                                    |
+| DOP10 roofs lean away from their footprints, so roof detail picks up walls or ground | 0b Bundesviertel                  | Tall roofs take a flat colour family and no photo brightness                                                                     |
+| Windows look messy on walls that don't follow the pixel grid                         | 0b sites                          | Simplify them, or drop them on those walls                                                                                       |
+| Basis-DLM polygons are too coarse or don't line up                                   | 0b Kennedybrücke                 | Cadastre land use (`lk/akt/gru_vereinfacht_gpkg`, licence zero, parcels without owners)                                        |
+| Headless rendering fails on the laptop's two GPUs                                    | First hour of 0a                  | Avoided for now: the prototype renders on the CPU in NumPy (see Prototype)                                                       |
+| Bonn exceeds 1 GB on GitHub Pages                                                    | 0b sample, then Phase 1           | Lower px/m, or crop to the city polygon                                                                                          |
+| The laptop is short on memory (about 3 GB free when checked)                         | 0a                                | Work one km² at a time; run while other jobs are stopped                                                                        |
 
 ## Repo layout
 
@@ -286,7 +307,8 @@ projects/isometric-bonn/
   building-plan.md
   README.md  LICENSE  LICENSE-ART  CONTRIBUTING.md  references-examples.md  SOURCES.md
   pyproject.toml  uv.lock
-  regions/bonn.yaml  regions/koeln.yaml  regions/nrw.yaml   # boundary, scale: same code, new config
+  areas/*.yaml                          # test areas now; Bonn's boundary later
+  style/style.yaml  style/palette.yaml  # camera, sun, colour rules and the palette
   src/isometric_bonn/                   # fetch, normalise, render, stylise, sprites, zoom levels
   sprites/  sprites.yaml  places.yaml
   viewer/
@@ -309,7 +331,7 @@ projects/isometric-bonn/
 - **Position:** about 20 known landmarks land within a few pixels of their projected position.
 - **No addresses:** a test confirms normalised data has no address fields.
 - **Palette:** every tile and sprite uses only palette colours (automated test).
-- **Licences:** each source's licence is recorded in `SOURCES.md`, with DGM1 and LoD1 confirmed there.
+- **Licences:** each source's licence is recorded in `SOURCES.md`, with DGM1, nDOM50 and DOP10 confirmed there.
 - **Viewer:** works at phone width and by keyboard; the browser's network panel shows no third-party requests; the first
   view loads under about 5 MB; site size is under 1 GB and the deploy finishes in time.
 - **People:** the Phase 0 votes, then the same members try the live map on their phones before launch.
@@ -322,12 +344,9 @@ projects/isometric-bonn/
 - [OpenGeodata.NRW](https://www.opengeodata.nrw.de/produkte/geobasis/),
   [LoD2 API](https://ogc-api.nrw.de/3dg/v1),
   [3D-Mesh NW](https://ckan.open.nrw.de/dataset/5f59c9b2-ad96-4775-afcb-3964f6f4a2dc),
-  [orthophoto WMS](https://www.wms.nrw.de/geobasis/wms_nw_dop?REQUEST=GetCapabilities&SERVICE=WMS),
   [simplified cadastre](https://ckan.open.nrw.de/sl/dataset/3e8cf42f-7faa-4bee-b71a-fc6c01d26213),
   [licence dl-de/zero-2-0](https://www.govdata.de/dl-de/zero-2-0)
 - [Bonn tree register](https://opendata.bonn.de/dataset/baumstandorte)
-- [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits),
-  [Cloudflare Pages limits](https://developers.cloudflare.com/pages/platform/limits/),
-  [Cloudflare R2 pricing](https://developers.cloudflare.com/r2/pricing/)
+- [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits)
 - [Uni Bonn HPC systems](https://www.hpc.uni-bonn.de/en/systems/marvin),
   [Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit)
