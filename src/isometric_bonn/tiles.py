@@ -15,11 +15,13 @@ from PIL import Image
 from .projection import TILE, Camera, tile_index
 
 
-def halve(img: np.ndarray) -> np.ndarray:
+def halve(img: np.ndarray, keep=()) -> np.ndarray:
     """Most-common-colour 2x downsampling of an (H, W, 3 or 4) uint8 image.
 
     Transparent pixels (alpha 0) count as one colour, so a block that is mostly outside the
-    map stays outside, and a mostly-inside block keeps an on-palette colour.
+    map stays outside, and a mostly-inside block keeps an on-palette colour. A colour listed
+    in `keep` (RGB, most important first) takes its block wherever it occurs, so thin marks
+    such as the church crosses survive zooming out.
     """
     h, w = img.shape[0] // 2 * 2, img.shape[1] // 2 * 2
     c = img.shape[2]
@@ -28,8 +30,13 @@ def halve(img: np.ndarray) -> np.ndarray:
     for i in range(c):
         key = (key << np.uint64(8)) | px[..., i]
     blocks = np.stack([key[0::2, 0::2], key[0::2, 1::2], key[1::2, 0::2], key[1::2, 1::2]], -1)
-    counts = (blocks[..., :, None] == blocks[..., None, :]).sum(-1)
-    pick = np.take_along_axis(blocks, counts.argmax(-1)[..., None], -1)[..., 0]
+    score = (blocks[..., :, None] == blocks[..., None, :]).sum(-1)
+    for rank, colour in enumerate(keep):
+        k = 0
+        for v in (tuple(colour) + (255,) * c)[:c]:  # opaque where the image has alpha
+            k = (k << 8) | int(v)
+        score = np.where(blocks == np.uint64(k), 8 * (len(keep) - rank), score)  # beats any count (<= 4)
+    pick = np.take_along_axis(blocks, score.argmax(-1)[..., None], -1)[..., 0]
     out = [(pick >> np.uint64(8 * (c - 1 - i))) & np.uint64(255) for i in range(c)]
     return np.stack(out, -1).astype(np.uint8)
 
@@ -83,8 +90,12 @@ def tile_names(level_dir: Path) -> set[tuple[int, int]]:
     return out
 
 
-def build_pyramid(root: Path, log=print) -> int:
-    """Zoomed-out levels root/1, root/2, ... from root/0, until one tile holds everything."""
+def build_pyramid(root: Path, log=print, keep=(), keep_levels: int = 2) -> int:
+    """Zoomed-out levels root/1, root/2, ... from root/0, until one tile holds everything.
+
+    The colours in `keep` win their blocks (see halve) down to level `keep_levels`: at half
+    and quarter size a cross still reads as one; further out it would only be gold dust.
+    """
     level = 0
     while True:
         names = tile_names(root / str(level))
@@ -99,7 +110,7 @@ def build_pyramid(root: Path, log=print) -> int:
                     if child in names:
                         im = np.asarray(Image.open(root / str(level) / f"{child[0]}_{child[1]}.webp").convert("RGBA"))
                         canvas[dy * TILE:(dy + 1) * TILE, dx * TILE:(dx + 1) * TILE] = im
-            save_tile(halve(canvas), root / str(level + 1) / f"{px}_{py}.webp")
+            save_tile(halve(canvas, keep if level < keep_levels else ()), root / str(level + 1) / f"{px}_{py}.webp")
         log(f"level {level + 1}: {len(parents)} tiles")
         level += 1
 

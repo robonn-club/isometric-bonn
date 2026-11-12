@@ -54,6 +54,15 @@
       "sha256": "f94aba2a9140d47b6c274ab2c3dcb59f741f229515de555ce18003065973cbfe",
       "fetched": "2026-11-11"
     },
+    "LoD2_32_359_5617_1_NW.gml": {
+      "product": "lod2",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/3dg/lod2_gml/lod2_gml/LoD2_32_359_5617_1_NW.gml",
+      "size": 2891377,
+      "timestamp": "2026-05-26T09:03:05",
+      "licence": "dl-de/zero-2-0",
+      "sha256": "c76784d4c90c3fb7140baa2d2de63156471f8f1a95e01e30e48aa5fa92a6c17b",
+      "fetched": "2026-11-11"
+    },
     "LoD2_32_359_5618_1_NW.gml": {
       "product": "lod2",
       "url": "https://www.opengeodata.nrw.de/produkte/geobasis/3dg/lod2_gml/lod2_gml/LoD2_32_359_5618_1_NW.gml",
@@ -367,6 +376,15 @@
       "timestamp": "2026-05-26T09:05:42",
       "licence": "dl-de/zero-2-0",
       "sha256": "41c91c6a7d9d26a489756f2d36d4d0363d43a6e76268e48e068369ab4444b384",
+      "fetched": "2026-11-11"
+    },
+    "LoD2_32_361_5626_1_NW.gml": {
+      "product": "lod2",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/3dg/lod2_gml/lod2_gml/LoD2_32_361_5626_1_NW.gml",
+      "size": 17400399,
+      "timestamp": "2026-05-26T09:05:42",
+      "licence": "dl-de/zero-2-0",
+      "sha256": "ea8c5527a1ad73201f1aea1677eb1dfe044d42135d187aed85e8d56b497e7e79",
       "fetched": "2026-11-11"
     },
     "LoD2_32_362_5609_1_NW.gml": {
@@ -2277,6 +2295,15 @@
       "sha256": "2bb187e3623fece8db1050fb0e1ffc3b84c93bed187721ead7fc36fc16adf2f9",
       "fetched": "2026-11-11"
     },
+    "dgm1_32_359_5617_1_nw_2021.tif": {
+      "product": "dgm1",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/hm/dgm1_tiff/dgm1_tiff/dgm1_32_359_5617_1_nw_2021.tif",
+      "size": 2291440,
+      "timestamp": "2023-07-03T20:18:59",
+      "licence": "dl-de/zero-2-0 (confirm from metadata)",
+      "sha256": "21d29a29254e9eefcaf5a842f02150783f29e822ee0118205a64c2f7df2c5719",
+      "fetched": "2026-11-11"
+    },
     "dgm1_32_359_5618_1_nw_2021.tif": {
       "product": "dgm1",
       "url": "https://www.opengeodata.nrw.de/produkte/geobasis/hm/dgm1_tiff/dgm1_tiff/dgm1_32_359_5618_1_nw_2021.tif",
@@ -2590,6 +2617,15 @@
       "timestamp": "2023-06-20T10:47:36",
       "licence": "dl-de/zero-2-0 (confirm from metadata)",
       "sha256": "a2da43104fe3bf44537f3ed8fdc838d41ae5cfa6689c729f26c7e477f1d88341",
+      "fetched": "2026-11-11"
+    },
+    "dgm1_32_361_5626_1_nw_2022.tif": {
+      "product": "dgm1",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/hm/dgm1_tiff/dgm1_tiff/dgm1_32_361_5626_1_nw_2022.tif",
+      "size": 1772112,
+      "timestamp": "2023-06-20T10:49:01",
+      "licence": "dl-de/zero-2-0 (confirm from metadata)",
+      "sha256": "6fb3c8f50afdfca7e5fe7540653ef6c79182d1c4218f9766cb8f117c1e671f16",
       "fetched": "2026-11-11"
     },
     "dgm1_32_362_5609_1_nw_2021.tif": {
@@ -4500,6 +4536,15 @@
       "sha256": "8c0d4c1ec6dd52c5879e92cbe8fb410f3cb08237284e9d591627a79f2023d749",
       "fetched": "2026-11-11"
     },
+    "dop10rgbi_32_359_5617_1_nw_2025.jp2": {
+      "product": "dop10",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/dop10rgbi_32_359_5617_1_nw_2025.jp2",
+      "size": 18089358,
+      "timestamp": "2025-09-24T21:33:30",
+      "licence": "dl-de/zero-2-0 (confirm from metadata)",
+      "sha256": "dce50f1368edcfa915f5ff283074bfb8d10a35f6940da6a5aa5214b08c492cd8",
+      "fetched": "2026-11-11"
+    },
     "dop10rgbi_32_359_5618_1_nw_2025.jp2": {
       "product": "dop10",
       "url": "https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/dop10rgbi_32_359_5618_1_nw_2025.jp2",
@@ -4813,6 +4858,15 @@
       "timestamp": "2025-09-24T22:24:36",
       "licence": "dl-de/zero-2-0 (confirm from metadata)",
       "sha256": "2d4ee916a1476d6418e0813e6637032ea9798bde6edb91c3b9c83a314633c694",
+      "fetched": "2026-11-11"
+    },
+    "dop10rgbi_32_361_5626_1_nw_2025.jp2": {
+      "product": "dop10",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/dop10rgbi_32_361_5626_1_nw_2025.jp2",
+      "size": 19308581,
+      "timestamp": "2025-09-24T22:26:03",
+      "licence": "dl-de/zero-2-0 (confirm from metadata)",
+      "sha256": "ffe359c5482454caee5134b6f46feec1cf5217dd0b253f717503bc6236a733f0",
       "fetched": "2026-11-11"
     },
     "dop10rgbi_32_362_5609_1_nw_2025.jp2": {
@@ -6678,6 +6732,15 @@
       "sha256": "9754ff0089f757a6a631ac4e715c2c793efa6d239aed1253a0db9afa04aca93e",
       "fetched": "2026-11-11"
     },
+    "gru_vereinf_05314000_Bonn_EPSG25832_GeoPackage.zip": {
+      "product": "gru",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/lk/akt/gru_vereinfacht_gpkg/gru_vereinf_05314000_Bonn_EPSG25832_GeoPackage.zip",
+      "size": 74356502,
+      "timestamp": "",
+      "licence": "dl-de/zero-2-0 (confirm from metadata)",
+      "sha256": "3c1c30c7a50b8f3359012df1aeeda666674c1413af8436496878ca4d3682e6e9",
+      "fetched": "2026-11-11"
+    },
     "ndom50_32359_5611_1_nw_2021.tif": {
       "product": "ndom50",
       "url": "https://www.opengeodata.nrw.de/produkte/geobasis/hm/ndom50_tiff/ndom50_tiff/ndom50_32359_5611_1_nw_2021.tif",
@@ -6730,6 +6793,15 @@
       "timestamp": "2025-10-30T17:44:20",
       "licence": "dl-de/zero-2-0 (confirm from metadata)",
       "sha256": "bb8f393913d25d57c95003dbb6fb56cbca05755a1a964e0f0463da98ccd84ff1",
+      "fetched": "2026-11-11"
+    },
+    "ndom50_32359_5617_1_nw_2025.tif": {
+      "product": "ndom50",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/hm/ndom50_tiff/ndom50_tiff/ndom50_32359_5617_1_nw_2025.tif",
+      "size": 16024810,
+      "timestamp": "2025-10-30T17:44:21",
+      "licence": "dl-de/zero-2-0 (confirm from metadata)",
+      "sha256": "063f3d29399d56e64249cd169e3c9e130996ff45af0181e60118cf39aaa7bcf9",
       "fetched": "2026-11-11"
     },
     "ndom50_32359_5618_1_nw_2025.tif": {
@@ -7045,6 +7117,15 @@
       "timestamp": "2025-10-30T17:45:12",
       "licence": "dl-de/zero-2-0 (confirm from metadata)",
       "sha256": "d8a5d819685b7322121c8c3b9e042a78dfe79df4ec3d1fc36d8d954893210238",
+      "fetched": "2026-11-11"
+    },
+    "ndom50_32361_5626_1_nw_2025.tif": {
+      "product": "ndom50",
+      "url": "https://www.opengeodata.nrw.de/produkte/geobasis/hm/ndom50_tiff/ndom50_tiff/ndom50_32361_5626_1_nw_2025.tif",
+      "size": 16024810,
+      "timestamp": "2025-10-30T17:45:13",
+      "licence": "dl-de/zero-2-0 (confirm from metadata)",
+      "sha256": "36c4561bd8a452b017b40466d5fc9a869c293e5e7ebe425cc29c48f89a58e88a",
       "fetched": "2026-11-11"
     },
     "ndom50_32362_5609_1_nw_2021.tif": {

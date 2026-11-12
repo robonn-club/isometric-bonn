@@ -192,6 +192,21 @@ def fetch_tiles(tiles: list[tuple[int, int]], data_dir: Path, products=("lod2", 
     return manifest
 
 
+def record(data_dir: Path, path: Path, product: str, url: str, licence: str, timestamp: str = "") -> None:
+    """Add one downloaded file outside the tiled products (DVG1, the cadastre) to data/manifest.json."""
+    manifest_path = data_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {"files": {}}
+    size = path.stat().st_size
+    entry = manifest["files"].get(path.name)
+    if entry and entry.get("size") == size:
+        return
+    manifest["files"][path.name] = {"product": product, "url": url, "size": size, "timestamp": timestamp,
+                                    "licence": licence, "sha256": sha256(path),
+                                    "fetched": dt.date.today().isoformat()}
+    manifest["files"] = dict(sorted(manifest["files"].items()))
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+
 def local_file(data_dir: Path, key: str, e_km: int, n_km: int) -> Path:
     """The downloaded file for one product and tile, found through the manifest."""
     manifest = json.loads((data_dir / "manifest.json").read_text())

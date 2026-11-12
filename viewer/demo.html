@@ -164,7 +164,7 @@ footer a { color: var(--ink-2); }
       <div class="pins" id="pins"></div>
       <div class="scale" aria-hidden="true"><svg id="scale-bar" width="104" height="54"></svg><span id="scale-text">50 m</span></div>
     </div>
-    <p class="hint">Drag to move · scroll, pinch or <kbd>+</kbd> <kbd>−</kbd> to zoom · arrow keys pan · {{px_per_m}}&nbsp;pixels per metre, so a 10&nbsp;m house is about 40&nbsp;px wide</p>
+    <p class="hint">Drag to move · scroll, pinch or <kbd>+</kbd> <kbd>−</kbd> to zoom · arrow keys pan · {{px_per_m}}&nbsp;pixels per metre</p>
   </section>
 
   <section class="compare" aria-labelledby="compare-title">
@@ -172,15 +172,15 @@ footer a { color: var(--ink-2); }
     <p>Phase 0a asks five members which look reads as a game rather than a GIS map. All three come from the same render; only the colour rules differ.</p>
     <div class="trio">
       <figure>
-        <div class="crop"><img src="ramp.png" alt="Poppelsdorfer Schloss in the photo-ramps look" style="left: calc(50% - 2140px); top: calc(50% - 600px);"></div>
+        <div class="crop"><img src="ramp.png" alt="Poppelsdorfer Schloss in the photo-ramps look" style="left: calc(50% - {{crop_x}}px); top: calc(50% - {{crop_y}}px); width: {{crop_w}}px; height: {{crop_h}}px;"></div>
         <figcaption><strong>Photo ramps<span class="tag">plan default</span></strong>The aerial photo's brightness picks the shade on each material's ramp, so lawns, paths and roof details come from the photo.</figcaption>
       </figure>
       <figure>
-        <div class="crop"><img src="flat.png" alt="Poppelsdorfer Schloss in the flat-colours look" style="left: calc(50% - 2140px); top: calc(50% - 600px);"></div>
+        <div class="crop"><img src="flat.png" alt="Poppelsdorfer Schloss in the flat-colours look" style="left: calc(50% - {{crop_x}}px); top: calc(50% - {{crop_y}}px); width: {{crop_w}}px; height: {{crop_h}}px;"></div>
         <figcaption><strong>Flat colours</strong>One colour per material, shaded by the sun. The cleanest look, with the least detail.</figcaption>
       </figure>
       <figure>
-        <div class="crop"><img src="photo.png" alt="Poppelsdorfer Schloss in the posterised-photo look" style="left: calc(50% - 2140px); top: calc(50% - 600px);"></div>
+        <div class="crop"><img src="photo.png" alt="Poppelsdorfer Schloss in the posterised-photo look" style="left: calc(50% - {{crop_x}}px); top: calc(50% - {{crop_y}}px); width: {{crop_w}}px; height: {{crop_h}}px;"></div>
         <figcaption><strong>Posterised photo<span class="tag">baseline</span></strong>The aerial photo laid over the 3D model and cut to 32 colours: the GIS look the plan compares against.</figcaption>
       </figure>
     </div>

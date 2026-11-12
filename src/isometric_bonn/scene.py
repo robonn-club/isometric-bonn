@@ -24,16 +24,17 @@ import numpy as np
 import shapely
 from scipy import ndimage
 
-from . import citygml
+from . import cars as carsmod
+from . import churches, citygml, landuse, trees
 from .fetch import local_file
 from .projection import SUBPIXEL, Camera, sun_vector, tile_window
 from .rasterize import rasterize
 from .rasters import mosaic
 
 # Materials in the `mat` layer.
-EMPTY, GROUND, TREE, ROOF, WALL, WATER, DECK = 0, 1, 2, 3, 4, 5, 6
+EMPTY, GROUND, TREE, ROOF, WALL, WATER, DECK, TRUNK, CAR = 0, 1, 2, 3, 4, 5, 6, 7, 8
 MATERIALS = {"empty": EMPTY, "ground": GROUND, "tree": TREE, "roof": ROOF, "wall": WALL, "water": WATER,
-             "deck": DECK}
+             "deck": DECK, "trunk": TRUNK, "car": CAR}
 
 _ZK = math.sqrt(6) / 2
 
@@ -156,14 +157,17 @@ def height_mesh(ndom, dgm, dop, foot, cfg):
     # Bridges and other raised structures LoD2 lacks: tall, not plants, not a building, and
     # wider than a bus, so vehicles, signs and noise barriers drop out.
     k = int(cfg["deck_min_width_cells"])
-    deck = (hag > cfg["deck_min_height"]) & (ndvi < cfg["tree_ndvi"]) & ~foot
+    # A deck is flat (a bridge, a platform roof); a tree crown in shade is rough.
+    mean = ndimage.uniform_filter(hag, 3)
+    rough = np.sqrt(np.maximum(ndimage.uniform_filter(hag * hag, 3) - mean * mean, 0))
+    deck = (hag > cfg["deck_min_height"]) & (ndvi < cfg["deck_max_ndvi"]) & (rough < cfg["deck_max_rough"]) & ~foot
     deck = ndimage.binary_opening(deck, structure=np.ones((k, k), bool))
     deck = ndimage.binary_closing(deck, iterations=2) & ~foot
     deck_h = np.where(deck, ndimage.median_filter(np.where(deck, hag, 0.0), size=5), 0.0)
     water = (px[..., 3] < cfg["water_max_infrared"]) & (ndvi < cfg["water_max_ndvi"]) & ~foot & ~veg & ~deck
     water = ndimage.binary_opening(water, iterations=2)
     water = ndimage.binary_closing(water, iterations=2) & ~foot
-    return ee, nn, ground, tree_h.astype(np.float64), veg, water, deck_h.astype(np.float64)
+    return ee, nn, ground, tree_h.astype(np.float64), veg, water, deck_h.astype(np.float64), px
 
 
 def mesh_triangles(z, cells):
@@ -183,25 +187,6 @@ def mesh_triangles(z, cells):
     return np.concatenate([t1, t2])
 
 
-def canopy(tree_h, cfg):
-    """Tree crowns as a surface of their own, floating above the ground mesh.
-
-    nDOM50 only knows the top of a crown. Meshed straight down to the ground, crowns turn
-    into curtains ("melted trees"). Instead the crown's edge drops only to a share of the
-    local tree height, which leaves open space and a shadow under each tree. Returns the
-    canopy height above ground per vertex, the cells to draw, and smoothed heights that
-    give crowns rounded shading.
-    """
-    is_tree = tree_h > 0.5
-    rim = ndimage.binary_dilation(is_tree, structure=np.ones((3, 3), bool)) & ~is_tree
-    peak = ndimage.maximum_filter(tree_h, size=5)
-    h = np.where(is_tree, tree_h, np.where(rim, cfg["crown_base"] * peak, 0.0))
-    t = is_tree.astype(np.int8)
-    cells = (t[:-1, :-1] + t[:-1, 1:] + t[1:, 1:] + t[1:, :-1]) >= 1
-    smooth = ndimage.gaussian_filter(h, cfg["crown_smooth"])
-    return h, cells, smooth
-
-
 def deck_surface(deck_h, cfg):
     """Raised decks as slabs of fixed thickness, floating like the tree crowns, so a bridge
     keeps the river visible under it instead of becoming a dam."""
@@ -212,6 +197,38 @@ def deck_surface(deck_h, cfg):
     t = is_d.astype(np.int8)
     cells = (t[:-1, :-1] + t[:-1, 1:] + t[1:, 1:] + t[1:, :-1]) >= 1
     return h, cells
+
+
+def _side_normals(tri):
+    """Normals of trunk and car faces, which are vertical sides as well as tops."""
+    if len(tri) == 0:
+        return np.zeros((0, 3))
+    n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+    return n / (np.linalg.norm(n, axis=1, keepdims=True) + 1e-12)
+
+
+def markings(dop, lu, ndom, cfg):
+    """Road markings, crossings and rails: bright lines thinner than about a metre, on the
+    photo's own grid, on roads, squares, car parks, sports grounds and rail. A white car is a
+    wide blob and drops out."""
+    a = dop.data.astype(np.float32)
+    luma = 0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]
+    rows, cols = luma.shape
+    e = dop.e0 + (np.arange(cols) + 0.5) * dop.res
+    n = dop.n0 - (np.arange(rows) + 0.5) * dop.res
+    ri = np.clip(np.floor((ndom.n0 - n) / ndom.res).astype(np.int64), 0, lu.shape[0] - 1)
+    ci = np.clip(np.floor((e - ndom.e0) / ndom.res).astype(np.int64), 0, lu.shape[1] - 1)
+    cls = lu[ri[:, None], ci[None, :]]
+    paved = np.isin(cls, [landuse.ROAD, landuse.PARKING, landuse.SQUARE, landuse.SPORTS, landuse.RAIL])
+    bright = (luma > cfg["mark_luma"]) & paved
+    thin = bright & ~ndimage.binary_opening(bright, structure=np.ones((3, 3), bool))
+    lab, n_ = ndimage.label(thin, structure=np.ones((3, 3), bool))
+    if n_ == 0:
+        return thin
+    size = np.bincount(lab.ravel())
+    keep = size >= int(cfg["mark_min_cells"])
+    keep[0] = False
+    return keep[lab]
 
 
 def _normals(tri):
@@ -256,8 +273,11 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     dop = mosaic("dop10", data_dir, e0, n0, e1, n1)
     log(f"rasters loaded ({time.time() - t_start:.0f} s)")
 
-    # Buildings near the box.
+    # Buildings near the box, with the church towers LoD2 lacks and the crosses. Both come
+    # from one table per render (city.run builds it for all windows), so windows agree.
     b = load_buildings(data_dir, tiles)
+    tab = churches.load(Path(area["churches"])) if area.get("churches") else churches.table(data_dir, tiles, cfg)
+    b, crosses = churches.apply(b, tab)
     cen = b["tri"].mean(1)
     near = (cen[:, 0] > e0) & (cen[:, 0] < e1) & (cen[:, 1] > n0) & (cen[:, 1] < n1)
     for k in ("tri", "tri_bld", "tri_kind", "tri_normal", "tri_poly"):
@@ -280,13 +300,24 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     log(f"{len(np.unique(b['tri_bld']))} buildings, {len(b['tri'])} triangles "
         f"({time.time() - t_start:.0f} s)")
 
-    # Height meshes: the ground everywhere, and tree crowns floating above it.
-    ee, nn, ground, tree_h, veg, water, deck_h = height_mesh(ndom, dgm, dop, foot, cfg)
-    ch, c_cells, ch_smooth = canopy(tree_h, cfg)
+    # Height meshes: the ground everywhere, tree crowns and decks floating above it.
+    ee, nn, ground, tree_h, veg, water_ir, deck_h, gpx = height_mesh(ndom, dgm, dop, foot, cfg)
+    lu_polys, lu_cls = landuse.load(data_dir)
+    lu = landuse.raster(lu_polys, lu_cls, ndom.e0, ndom.n0, ndom.res, ndom.data.shape)
+    hint = trees.conifer_hint(lu, gpx, landuse.FOREST_CLASSES, landuse.CONIFER, landuse.MIXED)
+    crown_h, crown_lab, crown_info = trees.crowns(tree_h, veg, hint, ndom.e0, ndom.n0, ndom.res, cfg)
+    ch, c_cells, c_sub = trees.canopy_surface(crown_h, crown_lab, crown_info)
     zc = ground + ch
+    deck_h = np.where(np.isin(lu, [landuse.ROAD, landuse.RAIL, landuse.WATER, landuse.VERGE, landuse.PATH,
+                                    landuse.SQUARE, landuse.PARKING]), deck_h, 0.0)
     dh, d_cells = deck_surface(deck_h, cfg)
     zd = ground + dh
     e_flat, n_flat = ee.ravel(), nn.ravel()
+    allowed = [landuse.ROAD, landuse.PARKING, landuse.SQUARE, landuse.BUILT, landuse.VERGE]
+    found = carsmod.detect(ndom.data, veg, foot, deck_h, lu, allowed, gpx, ee, nn, ndom.res, cfg)
+    car_tri, car_sub = carsmod.geometry(found, dgm.bilinear(found["e"], found["n"]) if len(found) else 0.0)
+    trunk_tri = trees.trunks(crown_info, ee, nn, ground, cfg)
+    log(f"{len(crown_info['top'])} tree crowns, {len(found)} cars ({time.time() - t_start:.0f} s)")
 
     def verts(tris, z):
         """(n, 3, 3) vertex positions of grid triangles, built only for the triangles used."""
@@ -298,49 +329,56 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     cast_b = b["tri_kind"] != citygml.KIND_GROUND
     tree_tris = mesh_triangles(zc, c_cells)
     deck_tris = mesh_triangles(zd, d_cells)
-    smap = ShadowMap(np.concatenate([b["tri"][cast_b], verts(tree_tris, zc), verts(deck_tris, zd)]),
-                     np.concatenate([b["tri_bld"][cast_b], np.full(len(tree_tris), -2), np.full(len(deck_tris), -3)]),
-                     sun, bounds_points(e0, n0, e1, n1, zlo, zhi), cfg["shadow_texel_m"])
+    smap = ShadowMap(
+        np.concatenate([b["tri"][cast_b], verts(tree_tris, zc), verts(deck_tris, zd), trunk_tri, car_tri]),
+        np.concatenate([b["tri_bld"][cast_b], np.full(len(tree_tris), -2), np.full(len(deck_tris), -3),
+                        np.full(len(trunk_tri), -2), np.full(len(car_tri), -4)]),
+        sun, bounds_points(e0, n0, e1, n1, zlo, zhi), cfg["shadow_texel_m"])
     del tree_tris, deck_tris
-    # Deep shadow on asphalt is as dark in infrared as water, so water must lie in the sun.
-    cand = np.flatnonzero(water)
+    # Water: the cadastre's water bodies, plus small ponds the infrared finds in parks and
+    # gardens (deep shadow on asphalt is as dark as water, so those must lie in the sun).
+    ir_ok = np.isin(lu, [landuse.PARK, landuse.CEMETERY, landuse.MEADOW, landuse.BUILT, landuse.BARE])
+    water_ir = water_ir & ir_ok
+    cand = np.flatnonzero(water_ir)
     pts = np.stack([e_flat[cand], n_flat[cand], ground.ravel()[cand]], 1)
-    water = water.copy()
-    water.ravel()[cand[smap.query(pts, -1, cfg["shadow_bias_m"], cfg["shadow_bias_m"])]] = False
-    water = finish_water(water, ndom.res, cfg["water_min_area_m2"])
+    water_ir = water_ir.copy()
+    water_ir.ravel()[cand[smap.query(pts, -1, cfg["shadow_bias_m"], cfg["shadow_bias_m"])]] = False
+    water = ((lu == landuse.WATER) | finish_water(water_ir, ndom.res, cfg["water_min_area_m2"])) & (deck_h <= 0)
     del pts, cand
     log(f"shadow map and water ({time.time() - t_start:.0f} s)")
+
+    def keep_inside(cells):
+        if clip is not None:
+            r_, c_ = np.nonzero(cells)
+            ce_ = (ee[r_, c_] + ee[r_, c_ + 1]) / 2
+            cn_ = (nn[r_, c_] + nn[r_ + 1, c_]) / 2
+            cells[r_, c_] = shapely.contains_xy(clip, ce_, cn_)
+        return cells
+
     vx, vy = cam.screen(ee, nn, ground)
-    g_cells = cells_in_window(vx, vy, ox, oy, w, h)
-    if clip is not None:
-        # A grid cell belongs to the area when its centre does.
-        r_, c_ = np.nonzero(g_cells)
-        ce_ = (ee[r_, c_] + ee[r_, c_ + 1]) / 2
-        cn_ = (nn[r_, c_] + nn[r_ + 1, c_]) / 2
-        g_cells[r_, c_] = shapely.contains_xy(clip, ce_, cn_)
+    g_cells = keep_inside(cells_in_window(vx, vy, ox, oy, w, h))
     g_tris = mesh_triangles(ground, g_cells)
     wv = water.astype(np.int8)
     water_cell = (wv[:-1, :-1] + wv[:-1, 1:] + wv[1:, 1:] + wv[1:, :-1]) >= 3
     g_water = np.tile(water_cell[g_cells], 2)
+    g_sub = np.tile(lu[:-1, :-1][g_cells], 2)
     vx, vy = cam.screen(ee, nn, zc)
-    c_in = c_cells & cells_in_window(vx, vy, ox, oy, w, h)
-    if clip is not None:
-        r_, c_ = np.nonzero(c_in)
-        ce_ = (ee[r_, c_] + ee[r_, c_ + 1]) / 2
-        cn_ = (nn[r_, c_] + nn[r_ + 1, c_]) / 2
-        c_in[r_, c_] = shapely.contains_xy(clip, ce_, cn_)
+    c_in = keep_inside(c_cells & cells_in_window(vx, vy, ox, oy, w, h))
     c_tris = mesh_triangles(zc, c_in)
+    c_tri_sub = np.tile(c_sub[c_in], 2)
     vx, vy = cam.screen(ee, nn, zd)
-    d_in = d_cells & cells_in_window(vx, vy, ox, oy, w, h)
-    if clip is not None:
-        r_, c_ = np.nonzero(d_in)
-        ce_ = (ee[r_, c_] + ee[r_, c_ + 1]) / 2
-        cn_ = (nn[r_, c_] + nn[r_ + 1, c_]) / 2
-        d_in[r_, c_] = shapely.contains_xy(clip, ce_, cn_)
+    d_in = keep_inside(d_cells & cells_in_window(vx, vy, ox, oy, w, h))
     d_tris = mesh_triangles(zd, d_in)
     del vx, vy
+    if clip is not None and len(found):
+        inside_car = np.repeat(shapely.contains_xy(clip, found["e"], found["n"]), 20)  # 20 triangles a car
+        car_tri, car_sub = car_tri[inside_car], car_sub[inside_car]
+    if clip is not None and len(trunk_tri):
+        tc = trunk_tri.mean(1)
+        inside_t = shapely.contains_xy(clip, tc[:, 0], tc[:, 1])
+        trunk_tri = trunk_tri[inside_t]
 
-    # Assemble the main render: buildings (roof, wall), ground mesh, canopy.
+    # Assemble the main render: buildings (roof, wall), ground, canopy, decks, trunks, cars.
     show = b["tri_kind"] != citygml.KIND_GROUND
     if keep_bld is not None:
         show &= keep_bld[b["tri_bld"]]
@@ -357,18 +395,25 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     gtri = verts(g_tris, ground)
     ctri = verts(c_tris, zc)
     dtri = verts(d_tris, zd)
-    tri = np.concatenate([btri, gtri, ctri, dtri])
+    tri = np.concatenate([btri, gtri, ctri, dtri, trunk_tri, car_tri])
     mat = np.concatenate([np.where(bkind == citygml.KIND_ROOF, ROOF, WALL),
                           np.where(g_water, WATER, GROUND), np.full(len(ctri), TREE),
-                          np.full(len(dtri), DECK)]).astype(np.uint8)
-    n_mesh = len(gtri) + len(ctri) + len(dtri)
+                          np.full(len(dtri), DECK), np.full(len(trunk_tri), TRUNK),
+                          np.full(len(car_tri), CAR)]).astype(np.uint8)
+    sub = np.concatenate([np.zeros(len(btri), np.uint8), np.where(g_water, landuse.WATER, g_sub),
+                          c_tri_sub, np.zeros(len(dtri) + len(trunk_tri), np.uint8), car_sub]).astype(np.uint8)
+    n_mesh = len(tri) - len(btri)
     bld = np.concatenate([bbld, np.full(n_mesh, -1)]).astype(np.int32)
-    normal = np.concatenate([bnorm, _normals(gtri), _normals(verts(c_tris, ground + ch_smooth)), _normals(dtri)])
+    # Crowns are shaded from slightly smoothed heights, so their sides don't flicker column by column.
+    smooth_c = ground + ndimage.gaussian_filter(ch, cfg["crown_shade_smooth"])
+    normal = np.concatenate([bnorm, _normals(gtri), _normals(verts(c_tris, smooth_c)), _normals(dtri),
+                             _side_normals(trunk_tri), _side_normals(car_tri)])
     poly = np.concatenate([bpoly, np.full(n_mesh, -1)])
     if len(tri) == 0:  # nothing of the area falls in this window (a corner at a city's edge)
-        mat, bld = np.zeros(1, np.uint8), np.full(1, -1, np.int32)
+        mat, bld, sub = np.zeros(1, np.uint8), np.full(1, -1, np.int32), np.zeros(1, np.uint8)
         normal, poly = np.zeros((1, 3)), np.full(1, -1)
-    log(f"main pass: {len(tri)} triangles ({len(btri)} building, {len(gtri)} ground, {len(ctri)} canopy)")
+    log(f"main pass: {len(tri)} triangles ({len(btri)} building, {len(gtri)} ground, {len(ctri)} canopy, "
+        f"{len(car_tri)} car)")
 
     x, y = cam.snap(tri[..., 0], tri[..., 1], tri[..., 2], (ox, oy))
     dep = cam.depth(tri[..., 0], tri[..., 1], tri[..., 2])
@@ -380,6 +425,8 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     tid = np.where(hit, tri_id, 0)
     px_mat = np.where(hit, mat[tid], EMPTY).astype(np.uint8)
     px_bld = np.where(hit, bld[tid], -1).astype(np.int32)
+    px_sub = np.where(hit, sub[tid], 0).astype(np.uint8)
+    px_facet = np.where(hit, poly[tid] & 0x7FFFFFFF, -1).astype(np.int32)
     px_n = normal[tid]
     view = cam.view_dir()
     facing_away = (px_n @ view) > 0
@@ -392,7 +439,8 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     photo[~hit] = 0
     agl = wz - dgm.bilinear(we, wn)
 
-    me = np.where(px_mat == TREE, -2, np.where(px_mat == DECK, -3, px_bld))
+    me = np.where((px_mat == TREE) | (px_mat == TRUNK), -2,
+                  np.where(px_mat == DECK, -3, np.where(px_mat == CAR, -4, px_bld)))
     shadow = np.zeros(hit.shape, dtype=bool)
     shadow[hit] = smap.query(np.stack([we[hit], wn[hit], wz[hit]], 1), me[hit],
                              cfg["shadow_bias_m"], cfg["shadow_self_bias_m"])
@@ -402,6 +450,28 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     wall_u, wall_h, wall_len = wall_coords(b, poly, tid, hit & (px_mat == WALL), we, wn, wz)
 
     roof_rgb, roof_luma, roof_ndvi, roof_cells = roof_stats(b, dop, smap, cfg)
+    mark = markings(dop, lu, ndom, cfg)
+    on_ground = hit & (px_mat == GROUND)
+    px_mark = np.zeros(hit.shape, dtype=bool)
+    px_mark[on_ground] = mark[dop.index(we[on_ground], wn[on_ground])]
+
+    # Crosses on church tops that land in this window (style.py draws them), with their
+    # depth so that anything in front still hides them.
+    e_ref, n_ref = float(area["center"][0]), float(area["center"][1])
+    cross_ok = np.ones(len(crosses["bld"]), dtype=bool)
+    if keep_bld is not None:
+        cross_ok &= keep_bld[crosses["bld"]]
+    cxyz = crosses["xyz"][cross_ok]
+    csx, csy = cam.screen(cxyz[:, 0], cxyz[:, 1], cxyz[:, 2])
+    cpx, cpy = np.rint(csx).astype(np.int64) - ox, np.floor(csy).astype(np.int64) - oy
+    vis = (cpx >= -8) & (cpx < w + 8) & (cpy >= -2) & (cpy < h + 16)
+    cross_xy = np.stack([cpx[vis], cpy[vis]], 1).astype(np.int32)
+    # A spire's last metres are thinner than a pixel and drop out of the render, so a thin
+    # rod joins the cross to the visible tip: half a pixel's width over the spire's flare.
+    with np.errstate(divide="ignore"):
+        rod = np.clip(np.rint(0.5 / crosses["slope"][cross_ok][vis]), 0, 10).astype(np.int32)
+    cross_rod = np.stack([np.floor(csx[vis]).astype(np.int64) - ox, rod], 1).astype(np.int32)
+    cross_depth = (cam.depth(cxyz[vis, 0], cxyz[vis, 1], cxyz[vis, 2]) - cam.depth(e_ref, n_ref, 0.0)).astype(np.float32)
 
     out = out_dir / area["name"]
     out.mkdir(parents=True, exist_ok=True)
@@ -409,10 +479,9 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
     remap = np.full(len(b["bld_gmlid"]), -1, dtype=np.int32)
     remap[used] = np.arange(len(used), dtype=np.int32)
     px_bld = np.where(px_bld >= 0, remap[np.maximum(px_bld, 0)], -1).astype(np.int32)
-    e_ref, n_ref = float(area["center"][0]), float(area["center"][1])
     np.savez_compressed(
         out / "layers.npz",
-        mat=px_mat, bld=px_bld, normal=px_n.astype(np.float32),
+        mat=px_mat, bld=px_bld, sub=px_sub, mark=px_mark, facet=px_facet, normal=px_n.astype(np.float32),
         depth=np.where(hit, depth - cam.depth(e_ref, n_ref, 0.0), np.inf).astype(np.float32),
         world=np.stack([we - e_ref, wn - n_ref, wz], -1).astype(np.float32),
         photo=photo.astype(np.uint8), shadow=shadow, agl=agl.astype(np.float32),
@@ -422,7 +491,8 @@ def build_layers(area: dict, style: dict, data_dir: Path, out_dir: Path, log=pri
         bld_gmlid=b["bld_gmlid"][used],
         bld_roof_rgb=roof_rgb[used].astype(np.float32), bld_roof_luma=roof_luma[used].astype(np.float32),
         bld_roof_ndvi=roof_ndvi[used].astype(np.float32), bld_roof_cells=roof_cells[used],
-        bld_rooftype=b["bld_rooftype"][used],
+        bld_rooftype=b["bld_rooftype"][used], cross_xy=cross_xy, cross_depth=cross_depth,
+        cross_rod=cross_rod,
     )
     meta = {
         "area": area["name"], "title": area.get("title", area["name"]),

@@ -12,8 +12,20 @@ ramps:
   paving:  ["#293740", "#36444D", "#45535B", "#56656C", "#6C7A80", "#869297", "#A2ACAF", "#C1C8C8", "#DADDD7"]
   soil:    ["#5C4B37", "#6E5A42", "#86704F", "#A08A65", "#BBA67F", "#D3C29A"]
   water:   ["#2F6A87", "#3A7C9B", "#4F98B8", "#67B2CF", "#8CC8DE"]
-  # trees, lit side up
+  # ground by land use (cadastre): clean asphalt with the photo's markings, paths, squares, rail
+  asphalt: ["#232C33", "#2A353C", "#323E46", "#3B4850"]
+  marking: ["#AEB5B1", "#DCE0D8", "#F2F3EC"]
+  path:    ["#7E7766", "#968F7A", "#AFA78F", "#C6BEA4", "#DAD2B8"]
+  plaza:   ["#7F8587", "#989D9D", "#B1B4B0", "#C9CBC4", "#DEDFD7"]
+  ballast: ["#463F39", "#58504A", "#6B625A", "#7F756B"]
+  rail:    ["#8C959A", "#B9C0C3"]
+  forest_floor: ["#1E2B1D", "#283723", "#33442B", "#405233"]
+  crop:    ["#557638", "#698B45", "#7FA055", "#97B467", "#B0C67C"]
+  pitch:   ["#3A773C", "#468746", "#549851", "#65A85E", "#79B86E"]
+  # trees, lit side up: two broadleaf greens and conifers, one per tree
   tree:    ["#1B3727", "#244A33", "#2E5B3D", "#3A6E48", "#4A8253", "#5D965E", "#78AC6B"]
+  tree_b:  ["#22402A", "#2C5236", "#386641", "#47794B", "#5A8D56", "#719F63", "#8DB474"]
+  conifer: ["#11251C", "#173025", "#1E3C2E", "#264938", "#305742", "#3C654D", "#4A7358"]
   # roofs, one family per building; grey roofs take their step from the photo's brightness
   roof_grey:   ["#2C3136", "#3A4046", "#4A5157", "#5C6369", "#70777D", "#878D92", "#A0A5A9", "#BBBFC1"]
   roof_red:    ["#5A2620", "#76332A", "#934134", "#AD5340", "#C66A51", "#DA8A6A"]
@@ -21,6 +33,7 @@ ramps:
   roof_green:  ["#2F4A31", "#3D5D3B", "#4D7046", "#5F8452", "#749860", "#8BAB70"]
   roof_copper: ["#2F5952", "#3D6F66", "#4E867B", "#659E91", "#80B5A7", "#A1CCBF"]
   glass:       ["#4E7F91", "#6B9DAE", "#8BBCCB", "#A6D4E1", "#C6E7EF", "#E4F5F8"]
+  roof_church: ["#1F2A44", "#283757", "#33456B", "#40557F", "#516895", "#677FAD"]   # churches: slate blue
   # walls: shade side in shadow, shade side, lit side, lit side facing the sun
   wall_plaster:  ["#857A66", "#A69A82", "#CFC4AA", "#E9E1CB"]   # homes: one of five tints per building
   wall_ochre:    ["#8A7552", "#AC946A", "#D3BC8E", "#EAD7AE"]
@@ -30,7 +43,16 @@ ramps:
   wall_stone:    ["#8A8371", "#ACA48F", "#D2CAB4", "#ECE6D6"]
   wall_concrete: ["#69757B", "#848F95", "#AAB3B7", "#CDD3D5"]
   wall_shed:     ["#4A545A", "#5D686E", "#7A858A", "#97A1A5"]
+  wall_church:   ["#93805F", "#B9A27A", "#E2CB9C", "#F8E8C0"]   # churches: pale honey stone
   window:        ["#293740", "#485F66"]   # Rhein 4 on the shade side, Rhein 3 in the sun
+  solar:         ["#1B2740", "#26365A", "#33466F"]
+  # cars, by the colour the photo shows: shade side, sun side, roof
+  car_white:  ["#8E9598", "#C3C9CA", "#E8EBE9"]
+  car_silver: ["#596268", "#858E93", "#AEB5B8"]
+  car_black:  ["#191E23", "#262C32", "#39424A"]
+  car_red:    ["#6A1E1D", "#982B28", "#C33F35"]
+  car_blue:   ["#1D3152", "#294876", "#3A629A"]
+  gold:          ["#8A6A1C", "#C99A2E", "#F2CF62"]   # the cross on a church top
   outline:       ["#16232A"]
   trunk:         ["#3D3225", "#55452F"]
   background:    ["#ECF1F5"]             # Rhein 1, outside the map

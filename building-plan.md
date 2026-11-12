@@ -267,6 +267,47 @@ of Phases 1 and 2 and before the 0a vote, in the plan-default look:
 - Not yet reviewed by members (Phase 2's "every km² reviewed"), not yet deployed, and the look is still the 0a
   candidate.
 
+**Detail round, the same evening** (Kaya: "More detailed map output"). Everything above was redone at 2.8 px/m
+(from 2.0) with more of the city drawn from data:
+
+- **Land use** from the cadastre's simplified GeoPackage (`lk/akt/gru_vereinfacht_gpkg`, 74 MB for Bonn; only
+  the `Nutzung` layer, never parcels or addresses). Roads, paths, squares, car parks, rail, water, three forest
+  types, fields, meadows, parks, sports grounds and cemeteries each get their own ground. Cadastre water
+  replaces the infrared guess, plus small park ponds the photo shows. In the Kottenforst it draws the drainage
+  ditches along forest edges as thin water lines: real, 1–3 m wide, kept for now.
+- **Single trees.** The canopy is split into crowns by steepest ascent to each top, merging regions at their
+  highest saddle (scipy's watershed put the boundary in the wrong place on ties). Each crown is rebuilt as a
+  rounded pillow (broadleaf) or a cone (conifer, from the cadastre's conifer forest and dark, low-infrared
+  crowns), in one of three shades; taller crowns get a trunk.
+- **Cars** from nDOM50 blobs 1–2.6 m high on roads, car parks and yards: a small two-box car along the blob's
+  long axis, in white, silver, black, red or blue from the photo. **Road markings** from thin bright lines in
+  the photo, **roof ridges** highlighted, **solar panels** on dark blue roofs, window sills.
+- Bridges and decks now only over roads, rail and water, which removes false decks on shaded trees.
+- **Churches** (Kaya: "Churches are not visible. I mean easy to catch with eyes."). LoD2 ends most
+  churches at the nave roof: the Münster's model stops 29 m above ground, its crossing tower is 81 m;
+  the Kreuzkirche loses its 70 m tower. Where nDOM50 rises 6 m above a church's own roof and 5 m above
+  everything LoD2 has for it (compact, square-ish, not a tree), a tower comes back: a shaft to the
+  measured top of its walls and a spire to the measured tip (Münster 79 m, Kreuzkirche 72 m,
+  Namen-Jesu 45 m twice). Churches also get pale stone walls, pointed windows, slate-blue roofs
+  (copper stays copper) and a gold cross on the highest point, on a thin rod where the spire tip
+  falls between pixels. Synagogues and mosques have their own use codes and keep the normal look.
+  ALKIS splits complexes into many buildings (one monastery has eleven, nine of them tall enough
+  for a cross; post-war churches often have a freestanding bell tower coded "religious building"),
+  so church buildings within 15 m of each other share one cross, on the complex's highest point;
+  twin towers within 1.5 m of each other in height keep one each. That took Bonn from 162 crosses
+  to 129 (38 restored towers on 33 churches). Towers and crosses come from one table for the
+  whole render (20 s for the city), since
+  a window only loads LoD2 about 60 m beyond its edges and a complex can be 90 m wide.
+- **Numbers:** 627 windows, 2.85 CPU hours (about 1.5 hours on two workers); 4,405 tiles at full size
+  (184 MB) and 286 MB with nine zoom levels; the site archive is 291 MB (6,029 files). Poppelsdorf, enlarged to
+  2560 × 1536 px (0.5 km²): 7,986 crowns and 1,368 cars, 58 s and 3.9 GB of memory.
+- **Map-only page** (Kaya: "No top RoBonn... text line. no text in the page, only the map, also no +, - buttons
+  or bottom text."). The city page is now the map alone, filling the window; header, buttons, notes, footer,
+  place labels and scale bar are gone, and drag, scroll, pinch and keys still work. So the Impressum and
+  privacy links and the data credit are no longer on the page (credits stay in the README), the Poppelsdorf
+  comparison is reachable only by its address, and Phase 3's list of places for keyboard and screen-reader
+  users needs a new home. Whether a public club page may go without an Impressum link is open.
+
 ## Optional AI upgrade
 
 Starts only when a free GPU is confirmed, ideally with at least 24 GB (one LoRA trainer lists that for the base Qwen
@@ -321,10 +362,11 @@ projects/isometric-bonn/
 ```
 
 - **Licences:** code MIT (like the Industry Map), tiles and sprites CC BY 4.0 (like the guidebook). The data needs no
-  credit, but the footer credits Geobasis NRW and Isometric NYC anyway.
+  credit, but the README credits Geobasis NRW and Isometric NYC anyway (the map page carries no text).
 - **Registration, once the repo exists:** add it to `ludwig/conventions.md` (repo table and public-repos rule),
   `ludwig/WORKSPACE-MAP.md` and the root `CLAUDE.md`.
-- **Legal:** the footer links to robonn.de's Impressum and privacy pages.
+- **Legal:** the map page has no footer since 2026-11-11, so robonn.de's Impressum and privacy pages are not
+  linked from it. Open: whether the site needs that link (see Prototype, detail round).
 
 ## Verification
 

@@ -4,7 +4,7 @@
 name: poppelsdorf
 title: Poppelsdorf
 center: [365250, 5621000]   # EPSG:25832 metres; the window is centred here, then snapped to 512 px tiles
-size_px: [2048, 1024]       # 4 x 2 map tiles, about 0.5 km2 of ground
+size_px: [2560, 1536]       # 5 x 3 map tiles, about 0.5 km2 of ground at 2.8 px/m
 
 # Labels on the demo page: a point on the ground (EPSG:25832) and metres above it.
 labels:

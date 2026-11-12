@@ -66,6 +66,10 @@ def build_demo(area: dict, style: dict, ramps: dict, root: Path, out: Path) -> P
         "data_files": len(manifest["files"]), "data_mb": f"{data_mb:.0f}",
         "sun_az": f"{style['sun']['azimuth']:g}", "sun_el": f"{style['sun']['elevation']:g}",
         "labels": json.dumps(labels, ensure_ascii=False),
+        # The comparison crops show the first label (the Schloss) at 2x, a little above centre.
+        "crop_x": 2 * labels[0]["x"] if labels else w,
+        "crop_y": 2 * labels[0]["y"] + 50 if labels else h,
+        "crop_w": 2 * w, "crop_h": 2 * h,
         "font_display": _font(root / "viewer" / "fonts" / "outfit-var.woff2"),
         "font_body": _font(root / "viewer" / "fonts" / "manrope-var.woff2"),
     }
@@ -155,14 +159,11 @@ def build_city_viewer(area: dict, style: dict, root: Path, out: Path, look: str 
         "size_mb": f"{size / 1e6:.0f}",
         "data_gb": f"{sum(f['size'] for f in manifest['files'].values()) / 1e9:.1f}",
         "date": dt.date.today().isoformat(),
-        "labels": json.dumps(labels, ensure_ascii=False),
         "bounds": json.dumps(bounds),
         "start": json.dumps(start),
         "px_per_m": f"{cam.px_per_m:g}",
-        "font_display": _font(root / "viewer" / "fonts" / "outfit-var.woff2"),
-        "font_body": _font(root / "viewer" / "fonts" / "manrope-var.woff2"),
     }
-    template = (root / "viewer" / "city.html").read_text()
+    template = (root / "viewer" / "city.html").read_text()  # the map alone: no text, no buttons
 
     local = dict(values, tile_px=TILE, url=f"../tiles/{look}/{{z}}/{{x}}_{{y}}.webp",
                  levels=json.dumps({str(k): [f"{x}_{y}" for x, y in v] for k, v in levels.items()}))
@@ -171,21 +172,50 @@ def build_city_viewer(area: dict, style: dict, root: Path, out: Path, look: str 
 
     if not pack_preview:
         return {"viewer": out / "viewer" / "index.html", "values": values}
-    sheets = pack(tiles_root, out / "preview" / "pack")
+    pack_dir = out / "preview" / "pack"
+    sheets = pack(tiles_root, pack_dir)
+    budget = area.get("preview_mb")
+    if budget:
+        sheets = preview_subset(sheets, pack_dir, start, TILE * 4, float(budget))
     prev = dict(values, tile_px=TILE * 4, url="pack/{z}/{x}_{y}.webp",
                 levels=json.dumps({str(k): [f"{x}_{y}" for x, y in v] for k, v in sheets.items()}))
-    (out / "preview" / "page.html").write_text(_fill(template, prev))
-    (out / "preview" / "index.html").write_text(_wrap(_fill(template, prev)))
-    files = sorted((out / "preview" / "pack").rglob("*.webp"))
+    page = _fill(template, prev)
+    (out / "preview" / "page.html").write_text(page)
+    (out / "preview" / "index.html").write_text(_wrap(page))
+    files = [pack_dir / str(lv) / f"{x}_{y}.webp" for lv, v in sorted(sheets.items()) for x, y in v]
+    (out / "preview" / "files.txt").write_text("".join(f"{f.relative_to(out / 'preview')}\n" for f in files))
     return {"viewer": out / "viewer" / "index.html", "preview": out / "preview" / "page.html",
             "sheets": len(files), "sheet_mb": sum(f.stat().st_size for f in files) / 1e6, "values": values}
+
+
+def preview_subset(sheets: dict, pack_dir: Path, centre: dict, sheet_px: int, budget_mb: float) -> dict:
+    """The sheets a size-limited preview carries: every sheet of level 1 and coarser, and the
+    level-0 sheets nearest the centre while the total stays within budget_mb. Where level 0 is
+    left out, the viewer enlarges the next coarser sheet."""
+    def size(lv, x, y):
+        return (pack_dir / str(lv) / f"{x}_{y}.webp").stat().st_size
+
+    keep = {lv: sorted(v) for lv, v in sheets.items() if lv > 0}
+    used = sum(size(lv, x, y) for lv, v in keep.items() for x, y in v)
+    cx, cy = centre["x"] / sheet_px, centre["y"] / sheet_px
+    near = sorted(sheets.get(0, []), key=lambda t: ((t[0] + 0.5 - cx) ** 2 + (t[1] + 0.5 - cy) ** 2, t))
+    chosen = []
+    for x, y in near:
+        s = size(0, x, y)
+        if used + s > budget_mb * 1e6:
+            break
+        chosen.append((x, y))
+        used += s
+    keep[0] = sorted(chosen)
+    return dict(sorted(keep.items()))
 
 
 def build_site(root: Path, out_root: Path, look: str = "ramp", limit_mb: float = 1000) -> Path:
     """The public site, ready for GitHub Pages: out/site/ and out/site.tar.gz.
 
-    index.html is the city viewer over the 512 px tiles in tiles/, and poppelsdorf/ holds the
-    comparison page. Everything is relative, so the site works under any path, such as
+    index.html is the city map over the 512 px tiles in tiles/, and poppelsdorf/ holds the
+    comparison page, reached by its address only, since the map page carries no text.
+    Everything is relative, so the site works under any path, such as
     https://robonn-club.github.io/isometric-bonn/. The archive goes into a GitHub Release;
     .github/workflows/pages.yml deploys it. Tiles never enter git.
     """
@@ -216,8 +246,6 @@ def build_site(root: Path, out_root: Path, look: str = "ramp", limit_mb: float =
     res = build_city_viewer(area, style, root, city_out, look=look, pack_preview=False)
     page = (city_out / "viewer" / "index.html").read_text()
     page = page.replace(f"../tiles/{look}/{{z}}/{{x}}_{{y}}.webp", "tiles/{z}/{x}_{y}.webp")
-    page = page.replace("<!-- compare-link -->",
-                        ' The three candidate looks are compared <a href="poppelsdorf/">in Poppelsdorf</a>.')
     (site / "index.html").write_text(page)
 
     # The Poppelsdorf comparison page, linking back to the city.

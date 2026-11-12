@@ -62,7 +62,7 @@ def cmd_render(area, style, ramps, args):
 
 def cmd_style(area, style, ramps, args):
     from .projection import Camera
-    from .style import LOOKS, stylise
+    from .style import LOOKS, marks, stylise
     from .tiles import halve, save_png, write_tiles
     out = OUT / area["name"]
     layers = dict(np.load(out / "layers.npz"))
@@ -73,7 +73,7 @@ def cmd_style(area, style, ramps, args):
         t = time.time()
         img = stylise(layers, meta, ramps, style["look"], look)
         save_png(img, out / f"{look}.png")
-        save_png(halve(img), out / f"{look}-half.png")
+        save_png(halve(img, keep=marks(ramps)), out / f"{look}-half.png")
         tiles = write_tiles(img, cam, tuple(meta["origin_px"]), out / "tiles" / look)
         colours = len(np.unique(img.reshape(-1, 3), axis=0))
         print(f"{look}: {out / (look + '.png')}, {len(tiles)} tiles, {colours} colours ({time.time() - t:.1f} s)")

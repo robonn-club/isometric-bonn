@@ -23,7 +23,9 @@ from PIL import Image
 from scipy import ndimage
 
 from .projection import sun_vector
-from .scene import DECK, GROUND, ROOF, TREE, WALL, WATER
+from . import churches
+from . import landuse as lu_
+from .scene import CAR, DECK, GROUND, ROOF, TREE, TRUNK, WALL, WATER
 
 LOOKS = ("flat", "ramp", "photo")
 
@@ -59,6 +61,7 @@ WINDOWS = {  # storey height, sill, window height, spacing, window width (metres
     "home": (3.0, 0.9, 1.3, 2.6, 1.1),
     "public": (3.8, 1.0, 1.9, 2.3, 1.4),
     "work": (3.6, 1.0, 1.6, 2.5, 1.6),
+    "church": (9.0, 3.0, 5.0, 4.0, 1.3),  # tall windows with a pointed top, one row per 9 m
 }
 
 
@@ -68,6 +71,8 @@ def wall_kind(function: str, height: float) -> tuple[str, str | None]:
     n = int(num) if num.isdigit() else 0
     if group != "31001":  # roofs over walkways, carports, bridges and other structures
         return "wall_shed", None
+    if n in churches.CHURCH:
+        return "wall_church", "church"
     if n == 2740:  # greenhouse
         return "glass", None
     if 2460 <= n <= 2465:  # garages and car parks
@@ -132,6 +137,35 @@ def stylise(layers: dict, meta: dict, ramps: dict, cfg: dict, look: str = "ramp"
         ramp[mask] = pal.rid(name)
         step[mask] = _levels(gl[mask], lo, hi, n) if use_photo else flat
 
+    # Then the cadastre's land use says what the ground is, where it says it.
+    sub = layers.get("sub", np.zeros(mat.shape, np.uint8))
+    mark = layers.get("mark", np.zeros(mat.shape, bool)) & gnd
+    green = ndvi > gcfg["grass_ndvi"]
+
+    def paint(mask, name, lohi, flat, smooth=None):
+        n = pal.lengths[pal.rid(name)]
+        src = smooth if smooth is not None else gl
+        ramp[mask] = pal.rid(name)
+        step[mask] = _levels(src[mask], *lohi, n) if use_photo else flat
+
+    road_l = ndimage.median_filter(luma, size=5)
+    asphalt = gnd & np.isin(sub, [lu_.ROAD, lu_.PARKING]) & ~green
+    paint(asphalt, "asphalt", cfg["road"]["asphalt_luma"], 2, road_l)
+    paint(gnd & (sub == lu_.PATH) & ~green, "path", gcfg["paving_luma"], 2)
+    paint(gnd & (sub == lu_.SQUARE) & ~green, "plaza", gcfg["paving_luma"], 3)
+    paint(gnd & (sub == lu_.RAIL), "ballast", gcfg["paving_luma"], 1)
+    forest_floor = gnd & np.isin(sub, lu_.FOREST_CLASSES) & ~(ndvi > 0.35)
+    paint(forest_floor, "forest_floor", gcfg["grass_luma"], 2)
+    paint(gnd & (sub == lu_.FIELD) & (ndvi > 0.3), "crop", gcfg["grass_luma"], 2)
+    paint(gnd & (sub == lu_.SPORTS) & green, "pitch", gcfg["grass_luma"], 3)
+    # Markings and rails: the photo's thin bright lines on paved ground.
+    rails = mark & (sub == lu_.RAIL)
+    lines = mark & ~rails & ~green
+    ramp[lines] = pal.rid("marking")
+    step[lines] = 1
+    ramp[rails] = pal.rid("rail")
+    step[rails] = 1
+
     # Bridges and other decks: the photo's asphalt on top, concrete on the sides.
     dek = mat == DECK
     top = dek & (normal[..., 2] > 0.6)
@@ -154,15 +188,32 @@ def stylise(layers: dict, meta: dict, ramps: dict, cfg: dict, look: str = "ramp"
     # same photo sample, which paints vertical streaks.
     tre = mat == TREE
     n_tree = pal.lengths[pal.rid("tree")]
-    light = np.clip((lam[tre] - 0.2) / 0.75, 0, 1)
+    light = np.clip((lam[tre] - 0.15) / 0.8, 0, 1)
     if use_photo:
         lo, hi = cfg["tree"]["luma"]
-        wp = 0.45 * np.clip(normal[..., 2][tre], 0, 1) ** 2
+        wp = 0.25 * np.clip(normal[..., 2][tre], 0, 1) ** 2
         lvl = (1 - wp) * light + wp * np.clip((luma[tre] - lo) / (hi - lo), 0, 1)
     else:
         lvl = 0.25 + 0.6 * light
-    ramp[tre] = pal.rid("tree")
-    step[tre] = np.clip(np.floor(lvl * n_tree), 0, n_tree - 1)
+    tsub = sub[tre].astype(np.int64)
+    tree_ramps = np.array([pal.rid("tree"), pal.rid("tree_b"), pal.rid("tree"), pal.rid("tree"),
+                           pal.rid("conifer"), pal.rid("conifer"), pal.rid("conifer"), pal.rid("conifer")])
+    ramp[tre] = tree_ramps[np.clip(tsub, 0, 7)]
+    step[tre] = np.clip(np.floor(lvl * n_tree) - (tsub % 4 == 2), 0, n_tree - 1)
+
+    # Trunks and cars.
+    trk = mat == TRUNK
+    ramp[trk] = pal.rid("trunk")
+    step[trk] = (lam[trk] > 0.1).astype(np.int16)
+    car = mat == CAR
+    car_ramps = np.array([pal.rid(n) for n in ("car_white", "car_silver", "car_black", "car_red", "car_blue")])
+    csub = sub[car].astype(np.int64)
+    glass = csub == 15
+    cramp = np.where(glass, pal.rid("window"), car_ramps[np.clip(csub, 0, 4)])
+    ctop = normal[..., 2][car] > 0.7
+    cstep = np.where(ctop, 2, np.where(lam[car] > 0.1, 1, 0))
+    ramp[car] = cramp
+    step[car] = np.where(glass, (lam[car] > 0.1).astype(np.int16), cstep)
 
     # Roofs: a family and a base step per building from the photo, then the sun per slope.
     nb = len(layers["bld_function"])
@@ -181,6 +232,27 @@ def stylise(layers: dict, meta: dict, ramps: dict, cfg: dict, look: str = "ramp"
         low = layers["bld_height"][bi] < rcfg["photo_max_height"]
         rstep += np.where(low, np.clip(np.round(diff / rcfg["photo_step_luma"]), -1, 1), 0).astype(np.int16)
     step[roofs] = rstep
+    # A one-pixel highlight along every ridge: the top edge of a roof facet that has another
+    # facet of the same building right above it.
+    facet = layers.get("facet")
+    if facet is not None:
+        up_f = np.full_like(facet, -1)
+        up_f[1:] = facet[:-1]
+        up_m = np.zeros_like(mat)
+        up_m[1:] = mat[:-1]
+        up_b = np.full_like(bld, -1)
+        up_b[1:] = bld[:-1]
+        ridge = roofs & (up_m == ROOF) & (up_b == bld) & (up_f != facet)
+        step[ridge] += 1
+    # Solar panels: dark, blue-tinted roof in the photo, drawn as rows of panels.
+    if use_photo:
+        sc = cfg["solar"]
+        solar = roofs & (luma < sc["max_luma"]) & (b - r > sc["min_blue"]) & (ndvi < 0.05) & ~shadow \
+            & (lam > sc["min_sun"])
+        solar &= ndimage.binary_opening(solar, structure=np.ones((3, 3), bool))
+        row = (np.arange(h)[:, None] + int(meta.get("origin_px", [0, 0])[1])) % 3 == 0
+        ramp[solar] = pal.rid("solar")
+        step[solar] = np.where(np.broadcast_to(row, solar.shape)[solar], 2, 1)
 
     # Walls: material by building function (homes in one of a few tints), sun and shade side.
     walls = (mat == WALL) & (bld >= 0)
@@ -201,9 +273,10 @@ def stylise(layers: dict, meta: dict, ramps: dict, cfg: dict, look: str = "ramp"
     # Windows, in rows by storey and columns along each wall.
     if cfg["wall"].get("windows", True):
         pattern = np.array([k[1] or "" for k in kinds] + [""])
-        win = _windows(layers, walls, pattern[bw])
+        win, sill = _windows(layers, walls, pattern[bw])
         ramp[win] = pal.rid("window")
         step[win] = (lit & ~shadow)[win].astype(np.int16)
+        step[sill] = 3  # a light sill under each window
 
     # Shadows: steps down on ground, roofs, trees and water.
     sh = shadow & (gnd | tre | roofs | top)
@@ -217,6 +290,9 @@ def stylise(layers: dict, meta: dict, ramps: dict, cfg: dict, look: str = "ramp"
     step[edge_obj] = 0
     ramp[edge_tree] = pal.rid("tree")
     step[edge_tree] = 0
+
+    # A gold cross on every church's highest point.
+    _crosses(layers, ramp, step, pal)
 
     return pal.rgb[pal.index(ramp, step)]
 
@@ -241,8 +317,11 @@ def _roof_families(layers, pal, rcfg):
     lo, hi = rcfg["luma"]
     for i in range(nb):
         f = layers["bld_function"][i]
+        church = churches.is_church(f)
         if f.startswith("31001_2740"):
             name = "glass"
+        elif church and not (rg[i] < rcfg["copper"] and rgb[i, 2] > rgb[i, 0]):
+            name = "roof_church"  # slate blue, so a church reads as one from afar
         elif nd[i] > 0.2:
             name = "roof_green"
         elif rg[i] > rcfg["warm"]:
@@ -253,13 +332,17 @@ def _roof_families(layers, pal, rcfg):
             name = "roof_grey"
         fam[i] = pal.rid(name)
         n = int(pal.lengths[fam[i]])
-        base[i] = _levels(np.array([ml[i]]), lo, hi, n)[0] if seen[i] else n // 2
+        if name == "roof_church":
+            base[i] = rcfg.get("church_step", n // 2)
+        else:
+            base[i] = _levels(np.array([ml[i]]), lo, hi, n)[0] if seen[i] else n // 2
     return fam, base
 
 
 def _windows(layers, walls, pattern):
     u, hgt, length = layers["wall_u"], layers["wall_h"], layers["wall_len"]
     out = np.zeros(walls.shape, dtype=bool)
+    sill_out = np.zeros(walls.shape, dtype=bool)
     for name, (storey, sill, wh, spacing, ww) in WINDOWS.items():
         m = walls & (pattern == name) & np.isfinite(u) & np.isfinite(hgt)
         if not m.any():
@@ -269,16 +352,68 @@ def _windows(layers, walls, pattern):
         ncol = np.floor((ll - 1.2) / spacing).astype(np.int64) + 1
         start = (ll - (ncol - 1) * spacing) / 2
         k = np.clip(np.round((uu - start) / spacing), 0, np.maximum(ncol - 1, 0))
-        in_col = (np.abs(uu - (start + k * spacing)) < ww / 2) & (ncol >= 1) & (ll >= 2.5)
+        half = ww / 2
+        if name == "church":  # a pointed arch: the top fifth narrows
+            half = np.where((hh % storey) > sill + 0.8 * wh, ww / 4, ww / 2)
+        in_col = (np.abs(uu - (start + k * spacing)) < half) & (ncol >= 1) & (ll >= 2.5)
         out[m] = in_row & in_col
-    return out
+        hs = hh % storey
+        sill_out[m] = (hs >= sill - 0.3) & (hs < sill) & (hh > 0) & in_col
+    return out, sill_out
+
+
+def _cross_sprite():
+    """A Latin cross 2 px thick with a dark outline, centred on x = 0 and standing on y = 0:
+    (dx, dy, kind) with kind 2 gold in the sun (right and top, as the sun comes from the
+    south-south-east), 1 gold in shade, 0 outline. 8 px wide, 11 px tall (about 4 m)."""
+    gold = {}
+    for r in range(1, 11):  # the upright, rows 1-10
+        gold[(3, r)], gold[(4, r)] = 1, 2
+    for c in (1, 2, 5, 6):  # the arms, rows 3-4
+        gold[(c, 3)], gold[(c, 4)] = 2, 1
+    line = {(c + dc, r + dr) for (c, r) in gold for dc in (-1, 0, 1) for dr in (-1, 0, 1)} - set(gold)
+    line = {q for q in line if q[1] <= 10}  # no outline under the foot: it stands on the spire
+    pix = [(c - 4, r - 11, k) for (c, r), k in gold.items()] + [(c - 4, r - 11, 0) for c, r in line]
+    return sorted(pix)
+
+
+CROSS = _cross_sprite()
+
+
+def marks(ramps: dict) -> list[tuple[int, int, int]]:
+    """Colours that should survive zooming out (tiles.halve): the crosses' gold, brightest first."""
+    return [tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) for h in reversed(ramps["gold"])]
+
+
+def _crosses(layers, ramp, step, pal):
+    """Draw the crosses, each on a thin rod down to the visible spire, where nothing in
+    front of the church top hides them."""
+    xy = layers.get("cross_xy")
+    if xy is None or len(xy) == 0:
+        return
+    depth = layers["depth"]
+    h, w = ramp.shape
+    gold, line = pal.rid("gold"), pal.rid("outline")
+    rods = layers.get("cross_rod", np.zeros((len(xy), 2), np.int32))
+    for (x0, y0), d, (xr, n_rod) in zip(np.asarray(xy), np.asarray(layers["cross_depth"]), np.asarray(rods)):
+        for y in range(int(y0), int(y0) + int(n_rod)):
+            if 0 <= xr < w and 0 <= y < h and depth[y, xr] >= d - 1.5:
+                ramp[y, xr], step[y, xr] = line, 0
+        for dx, dy, kind in CROSS:
+            x, y = int(x0) + dx, int(y0) + dy
+            if not (0 <= x < w and 0 <= y < h) or depth[y, x] < d - 1.5:
+                continue  # outside this window, or something in front hides it
+            if kind == 0:
+                ramp[y, x], step[y, x] = line, 0
+            else:
+                ramp[y, x], step[y, x] = gold, kind
 
 
 def _outlines(layers, cfg):
     """Silhouettes: an object pixel whose neighbour lies well behind it, or belongs to
     another building at about the same depth. Ground and water never get an outline."""
     mat, bld, d = layers["mat"], layers["bld"], layers["depth"].astype(np.float64)
-    obj = (mat == ROOF) | (mat == WALL) | (mat == TREE) | (mat == DECK)
+    obj = (mat == ROOF) | (mat == WALL) | (mat == TREE) | (mat == DECK) | (mat == TRUNK) | (mat == CAR)
     tree = mat == TREE
     t = np.where(tree, cfg.get("outline_tree_depth_m", cfg["outline_depth_m"]), cfg["outline_depth_m"])
     edge = np.zeros(mat.shape, dtype=bool)

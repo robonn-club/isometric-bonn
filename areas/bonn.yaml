@@ -6,6 +6,10 @@ title: Bonn
 municipality: "05314000"
 window_px: [2048, 1024]
 overlap_px: 4
+# The hosted preview (a Claude artifact, at most 256 MB) carries every zoom level, but 1x
+# detail only for the sheets nearest the centre that fit in preview_mb. GitHub Pages
+# carries everything.
+preview_mb: 240
 
 # Labels: lonlat is WGS84, at is EPSG:25832. With snap: tallest a label moves onto the
 # tallest LoD2 building within radius metres. min_scale hides a label when zoomed further out.

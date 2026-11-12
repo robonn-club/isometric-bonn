@@ -2,7 +2,7 @@ import numpy as np
 import yaml
 
 from isometric_bonn.cli import ROOT
-from isometric_bonn.scene import GROUND, ROOF, TREE, WALL, WATER
+from isometric_bonn.scene import CAR, DECK, GROUND, ROOF, TREE, TRUNK, WALL, WATER
 from isometric_bonn.style import LOOKS, Palette, stable_pick, stylise, wall_kind
 from isometric_bonn.tiles import halve
 
@@ -12,13 +12,16 @@ RAMPS = yaml.safe_load((ROOT / "style" / "palette.yaml").read_text())["ramps"]
 
 def _layers(h=64, w=96, seed=0):
     rng = np.random.default_rng(seed)
-    mat = rng.choice([GROUND, TREE, ROOF, WALL, WATER], size=(h, w)).astype(np.uint8)
+    mat = rng.choice([GROUND, TREE, ROOF, WALL, WATER, DECK, TRUNK, CAR], size=(h, w)).astype(np.uint8)
     bld = np.where((mat == ROOF) | (mat == WALL), rng.integers(0, 3, (h, w)), -1).astype(np.int32)
     n = rng.normal(size=(h, w, 3))
     n[..., 2] = np.abs(n[..., 2])
     n /= np.linalg.norm(n, axis=-1, keepdims=True)
     return {
         "mat": mat, "bld": bld, "normal": n.astype(np.float32),
+        "sub": rng.integers(0, 18, (h, w)).astype(np.uint8),
+        "mark": rng.random((h, w)) < 0.1,
+        "facet": rng.integers(0, 4, (h, w)).astype(np.int32),
         "depth": rng.uniform(0, 50, (h, w)).astype(np.float32),
         "photo": rng.integers(0, 256, (h, w, 4)).astype(np.uint8),
         "shadow": rng.random((h, w)) < 0.3,

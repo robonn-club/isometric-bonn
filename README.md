@@ -3,9 +3,9 @@
 A zoomable isometric pixel-art map of Bonn, built from the state's open 3D data by fixed rules
 on one laptop. A project of [Robonn](https://robonn.de), the robotics club at Universität Bonn.
 
-**Status (2026-11-11):** Phase 0a prototype. A test area, Poppelsdorf (0.52 km² around
+**Status (2026-11-11):** Phase 0a prototype. A test area, Poppelsdorf (0.5 km² around
 Poppelsdorfer Schloss), goes end to end from download to map tiles and a comparison page with
-three looks, and all of Bonn (141 km²) has been rendered once in the default look. The plan,
+three looks, and all of Bonn (141 km²) is rendered at 2.8 pixels per metre in the default look. The plan,
 phases and decisions are in [`building-plan.md`](building-plan.md).
 
 ## Run it
@@ -37,13 +37,16 @@ uv run isobonn city bonn --workers 2 --drop-layers
 xdg-open out/bonn/viewer/index.html
 ```
 
-This takes Bonn's boundary from DVG1, downloads the 236 data tiles it needs (about 14 GB), and
-renders 338 windows of 2048 × 1024 px, each with a 4 px overlap that is cropped so neighbours
-match exactly. Ground, trees and buildings outside the boundary are left out; the boundary gets a
-dark line. Then it builds the zoom levels and a viewer. Each worker needs about 3.5 GB of memory.
+This takes Bonn's boundary from DVG1, downloads the 1 km data tiles it needs (about 15 GB) and the
+cadastre's land use (74 MB), and renders 627 windows of 2048 × 1024 px, each with a 4 px overlap
+that is cropped so neighbours match exactly. Ground, trees and buildings outside the boundary are left out; the boundary gets a
+dark line. Then it builds the zoom levels and a viewer. Each worker needs about 2.5 GB of memory.
 The run can stop at any time: `out/bonn/progress.json` records finished windows, and the same
 command continues. Without `--drop-layers` each window also keeps its layers (about 50 MB each),
 so the whole city can be recoloured without rendering again.
+
+The city page is the map alone, filling the window, with no text or buttons: drag to move,
+scroll or pinch (or press + and −) to zoom, double-click to zoom in, 0 shows the whole city.
 
 ## Publish on GitHub Pages
 
@@ -51,16 +54,16 @@ Tiles never enter git. They go into a GitHub Release as one archive, and a workf
 hand deploys it ([`.github/workflows/pages.yml`](.github/workflows/pages.yml)).
 
 ```sh
-uv run isobonn site bonn                       # out/site/ and out/site.tar.gz (about 175 MB)
+uv run isobonn site bonn                       # out/site/ and out/site.tar.gz (about 290 MB)
 python3 -m http.server -d out/site 8000        # optional: check it at http://localhost:8000
 gh release create map-2026-11-11 out/site.tar.gz --title "Map of Bonn, 2026-11-11" --notes "First full render."
 gh workflow run pages.yml                      # deploys the latest release; -f tag=... for another
 ```
 
 Once per repository: Settings → Pages → Build and deployment → Source: **GitHub Actions**. The
-site then lives at https://robonn-club.github.io/isometric-bonn/: the city at the root and the
-three-look comparison at `/poppelsdorf/`. It loads nothing from other hosts, links robonn.de's
-Impressum and privacy page, and stays far below Pages' 1 GB limit (one render is about 175 MB).
+site then lives at https://robonn-club.github.io/isometric-bonn/: the map at the root and the
+three-look comparison at `/poppelsdorf/`, which nothing links to since the map page has no text.
+It loads nothing from other hosts and stays below Pages' 1 GB limit (one render is about 290 MB).
 To go back to an earlier render, run the workflow with that release's tag.
 
 ## Change the look
@@ -75,16 +78,30 @@ rendered images, so a re-render keeps them.
 
 1. **Fetch.** LoD2 buildings, DGM1 ground heights, nDOM50 heights above ground and the DOP10
    aerial photo from [OpenGeodata.NRW](https://www.opengeodata.nrw.de/produkte/geobasis/).
-2. **Model.** Roofs and walls from LoD2. Ground and tree crowns as 0.5 m height meshes; heights
-   count as trees only where the photo's infrared says plants, and crowns float above the ground
-   so they don't melt into curtains. Bridges and other raised structures LoD2 lacks become floating
-   decks. Water comes from the infrared for now.
-3. **Render.** One fixed pixel grid for all of Bonn at 2 px per metre, camera at 30° looking
+2. **Model.** Roofs and walls from LoD2. The ground as a 0.5 m height mesh, classed by the
+   cadastre's land use: road, path, square, car park, rail, water, forest (broadleaf, conifer,
+   mixed), field, meadow, park, sports ground, cemetery. Trees are single crowns: tops are found in
+   nDOM50 where the photo's infrared says plants, the canopy is split between them at its saddles,
+   and each crown is rebuilt as a rounded crown (or a cone for conifers) on a trunk. Car-sized
+   blobs on roads and car parks become small cars in the photo's colour. Bridges and other raised
+   structures LoD2 lacks become floating decks. LoD2 often ends a church at its nave roof, so where
+   nDOM50 rises well above a church and above everything LoD2 has for it, a tower is added: a shaft
+   to the measured top of its walls and a spire to the measured tip (the Münster's crossing tower,
+   the Kreuzkirche, the twin towers of the Namen-Jesu-Kirche).
+3. **Render.** One fixed pixel grid for all of Bonn at 2.8 px per metre, camera at 30° looking
    north-east, rasterised in plain NumPy with exact integer edge tests, so a tile is the same
    bytes on any machine and in any window. Hard shadows use the photo's own sun.
 4. **Style.** Every pixel picks a step on a palette ramp: the photo's brightness on ground and
-   low roofs, the sun on walls and roof slopes, each roof's family from the photo, walls and
-   windows from the building's use. Outlines on silhouettes.
+   low roofs, the sun on walls, roof slopes and crowns, each roof's family from the photo, walls
+   and windows (with sills) from the building's use. Roads are clean asphalt that keeps only the
+   photo's thin bright lines (markings, crossings, rails); ridges get a highlight, solar panels
+   show in rows. Churches (church, chapel, monastery and other religious buildings in the
+   cadastre's use codes) get their own look so the eye finds them: pale stone walls, tall
+   pointed windows, slate-blue roofs (copper stays copper) and a gold cross. Church buildings
+   within 15 m of each other (a church and its bell tower, a monastery's wings) count as one
+   complex with one cross, on its highest point; twin towers keep one each. Towers and crosses
+   are decided once for the whole city, so neighbouring windows agree.
+   Outlines on silhouettes and between crowns.
 5. **Tiles.** 512 px lossless WebP, indexed from Bonn's corner; zoomed-out images keep the most
    common colour of each 2 × 2 block, so they stay on the palette.
 
@@ -120,3 +137,5 @@ skips without them.
 
 Sources, survey dates and licence status are in [`SOURCES.md`](SOURCES.md). Code is MIT
 ([`LICENSE`](LICENSE)); map images and sprites are CC BY 4.0 ([`LICENSE-ART`](LICENSE-ART)).
+The map page carries no text, so the credits live here: data from Geobasis NRW under
+Datenlizenz Deutschland Zero 2.0; the idea follows Isometric NYC.

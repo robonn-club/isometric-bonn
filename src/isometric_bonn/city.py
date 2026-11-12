@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import shapely
 
-from . import fetch
+from . import churches, fetch
 from .projection import TILE, Camera, tile_index, tile_origin
 
 DVG1_ZIP = "vkg/dvg/dvg1/dvg1_EPSG25832_Shape.zip"
@@ -34,6 +34,7 @@ def boundary(data_dir: Path, key: str = "05314000") -> shapely.Polygon:
     import shapefile  # pyshp, only needed once
 
     z = fetch.download(fetch.BASE + DVG1_ZIP, data_dir / "raw" / "dvg1" / Path(DVG1_ZIP).name, DVG1_SIZE)
+    fetch.record(data_dir, z, "dvg1", fetch.BASE + DVG1_ZIP, "dl-de/zero-2-0 (confirm from metadata)")
     out = data_dir / "dvg1"
     out.mkdir(parents=True, exist_ok=True)
     zipfile.ZipFile(z).extractall(out)
@@ -158,6 +159,7 @@ def render_window(job: dict):
     shapely.prepare(poly)
     ox, oy, w, h, m = job["ox"], job["oy"], job["w"], job["h"], job["margin"]
     area = window_area(job["name"], cam, ox, oy, w, h, m)
+    area["churches"] = job["churches"]
     out_dir, data_dir = Path(job["out"]), Path(job["data"])
     scene.build_layers(area, job["style"], data_dir, out_dir, log=lambda s: None, clip=poly)
     wdir = out_dir / area["name"]
@@ -185,6 +187,7 @@ def run(area: dict, style: dict, ramps: dict, data_dir: Path, out_root: Path, wo
     import multiprocessing as mp
 
     from . import scene
+    from .style import marks
     from .tiles import build_pyramid
 
     cam = Camera(float(style["camera"]["px_per_m"]))
@@ -200,6 +203,14 @@ def run(area: dict, style: dict, ramps: dict, data_dir: Path, out_root: Path, wo
     for ox, oy in wins:
         need.update(scene.tiles_needed(window_area(area["name"], cam, ox, oy, w, h, margin), style))
     fetch.fetch_tiles(sorted(need), data_dir, log=log)
+    # Church towers and crosses for the whole city at once, so neighbouring windows agree
+    # even about a monastery that straddles them.
+    t_c = time.time()
+    tab = churches.table(data_dir, sorted(need), style["render"])
+    church_file = out / "churches.npz"
+    churches.save(tab, church_file)
+    log(f"churches: towers on {len(tab['tower_gid'])} buildings, {len(tab['cross_gid'])} crosses "
+        f"({time.time() - t_c:.0f} s)")
 
     prog = load_progress(out)
     todo = [(ox, oy) for ox, oy in wins if f"{ox}_{oy}" not in prog["done"]]
@@ -208,7 +219,7 @@ def run(area: dict, style: dict, ramps: dict, data_dir: Path, out_root: Path, wo
     log(f"{len(prog['done'])} windows done before, {len(todo)} to render with {workers} worker(s)")
     base = {"name": area["name"], "px_per_m": cam.px_per_m, "poly": shapely.to_wkb(poly), "w": w, "h": h,
             "margin": margin, "out": str(out_root), "data": str(data_dir), "style": style, "ramps": ramps,
-            "looks": list(looks), "keep_layers": keep_layers}
+            "looks": list(looks), "keep_layers": keep_layers, "churches": str(church_file)}
     jobs = [dict(base, ox=ox, oy=oy) for ox, oy in todo]
     t0 = time.time()
     ctx = mp.get_context("fork")
@@ -221,7 +232,7 @@ def run(area: dict, style: dict, ramps: dict, data_dir: Path, out_root: Path, wo
                 f"(about {rate * (len(jobs) - i) / 60:.0f} min left)")
     if len(prog["done"]) >= len(wins):
         for look in looks:
-            top = build_pyramid(out / "tiles" / look, log=lambda s: log(f"  {look} {s}"))
+            top = build_pyramid(out / "tiles" / look, log=lambda s: log(f"  {look} {s}"), keep=marks(ramps))
             log(f"{look}: pyramid of {top + 1} levels")
     return out
 

@@ -2,7 +2,7 @@
 # (colours only) or `isobonn render <area>` (geometry, shadows). Colours are in palette.yaml.
 
 camera:
-  px_per_m: 2            # plan default for Bonn; 1.4 is the chunkier alternative
+  px_per_m: 2.8          # Isometric NYC's level: a 10 m house is about 57 px wide (plan default was 2)
 
 sun:                     # matches the aerial photo's light (DOP10 Bonn, flown 2025-05-01)
   azimuth: 152.5         # degrees clockwise from north; both values estimated from the photo's
@@ -17,20 +17,46 @@ render:
   shadow_self_bias_m: 1.5  # within one building or tree canopy
   shadow_margin_m: 40    # casters this far outside the view still count; height / tan(elevation)
                          # of the tallest building (Post Tower, 162 m: use 150)
-  crown_base: 0.4        # a crown's edge drops to this share of the tree's height, not to the ground
-  crown_smooth: 1.5      # smoothing of crown shading, in 0.5 m cells
+  crown_base: 0.35       # a broadleaf crown's lowest edge, as a share of the tree's height
+  conifer_base: 0.2      # a conifer's cone reaches lower
+  crown_peak_smooth: 1.5 # smoothing before finding crown tops, in 0.5 m cells
+  crown_spacing_cells: 9 # crown tops at least this many cells apart (4.5 m), so big crowns stay whole
+  trunk_min_height: 5    # trees this tall get a trunk under the crown ...
+  trunk_min_radius_cells: 3 # ... if the crown is at least 1.5 m from edge to centre
+  crown_min_cells: 10     # canopy pieces smaller than this (2.5 m2) are not drawn as trees
+  crown_shade_smooth: 1.5 # smoothing of crown shading, in 0.5 m cells (keeps crown sides from flickering)
+  trunk_width: 0.6
+  car_min_height: 1.0    # cars: blobs this high above the ground ...
+  car_max_height: 2.6
+  car_min_area: 3.5      # ... and this big, in square metres
+  car_max_area: 12
+  mark_luma: 175         # road markings: photo brightness above this, in lines under a metre wide
+  mark_min_cells: 7      # and at least this many 0.4 m cells long, so specks of cars drop out
   water_max_infrared: 45 # open water is near black in infrared (stand-in for Basis-DLM polygons)
   water_max_ndvi: 0.02
   water_min_area_m2: 100
   deck_min_height: 4      # raised structures LoD2 lacks (bridges, overpasses): metres above ground
   deck_min_width_cells: 7 # and at least this many 0.5 m cells wide, so buses and signs drop out
+  deck_max_ndvi: 0.1     # and clearly not plants
+  deck_max_rough: 0.6    # and flat (metres of local height variation); crowns in shade are rough
   deck_thickness: 1.5     # decks float as slabs this thick, so the river stays visible underneath
+  # Churches (churches.py): the towers LoD2 lacks, from the height model, and a cross on top
+  tower_min_excess: 6     # metres above the church's own LoD2 roof
+  tower_min_rise: 5       # metres above the highest point LoD2 has for that church
+  tower_min_height: 15    # metres from the ground to the tip; lower ones are roof misfits
+  tower_min_cells: 16     # 4 m2 on the 0.5 m grid
+  tower_max_aspect: 2.0   # towers are about square in plan
+  tower_min_fill: 0.5     # share of the tower's rectangle the raised area fills
+  tower_max_ndvi: 0.1     # above this the raised area is a tree
+  cross_min_height: 8     # metres from the ground to the church's top; shrines get no cross
+  cross_min_height_other: 12  # the same for religious buildings and monasteries (not churches, chapels)
+  cross_complex_gap_m: 15  # church buildings this close form one complex with one cross (bell towers, monastery wings)
 
 # Colour rules (style step only; run `isobonn style <area>`).
 look:
   shadow_steps: 2          # ramp steps down in sun shadow
   outline_depth_m: 2.0     # a neighbour this far behind makes a silhouette pixel
-  outline_tree_depth_m: 5.0  # trees: only real silhouettes, not every step down a crown
+  outline_tree_depth_m: 2.5  # between tree crowns (each crown is a smooth dome, so no false lines)
   photo_colours: 32        # posterised-photo comparison look
   ground:
     grass_ndvi: 0.2
@@ -52,6 +78,13 @@ look:
     copper: -10            # red minus green below which a cyan-green roof is copper
     photo_max_height: 12   # metres; taller roofs lean in the photo, so no photo detail
     photo_step_luma: 28
+    church_step: 3         # churches' slate-blue roofs: a fixed step, then the sun per slope
+  road:
+    asphalt_luma: [40, 130]  # photo brightness spread over the asphalt ramp (after a 5 px median)
+  solar:
+    max_luma: 48             # very dark, blue-tinted pixels on a sunlit roof slope are solar panels
+    min_blue: 25             # (the photo is cool overall, so slate alone is not enough)
+    min_sun: 0.5
   wall:
     lit: 0.1               # sun on a wall above this: lit side
     strong: 0.55

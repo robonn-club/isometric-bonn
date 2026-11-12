@@ -47,7 +47,7 @@ def test_one_tile_alone_matches_the_window(tmp_path):
 def _city_window(tmp_path, ox, oy, poly, m=4):
     from isometric_bonn import city
     from isometric_bonn.projection import Camera
-    cam = Camera(2.0)
+    cam = Camera(float(STYLE["camera"]["px_per_m"]))
     area = city.window_area("seam-city", cam, ox, oy, 2048, 1024, m)
     scene.build_layers(area, STYLE, DATA, tmp_path, log=lambda s: None, clip=poly)
     lay = dict(np.load(tmp_path / area["name"] / "layers.npz"))
@@ -63,10 +63,12 @@ def test_city_windows_agree_across_their_borders(tmp_path):
     including the boundary clip and the cropped overlap."""
     from isometric_bonn import city
     from isometric_bonn.projection import Camera
-    cam = Camera(2.0)
+    from isometric_bonn.geo import lonlat_to_utm32
+    cam = Camera(float(STYLE["camera"]["px_per_m"]))
     poly = city.boundary(DATA)
     wins = city.windows(cam, poly)
-    zentrum = sorted(wins, key=lambda w: abs(w[0] + 1024 + 10_511_900) + abs(w[1] + 512 + 5_988_200))[0]
+    mx, my = cam.screen(*lonlat_to_utm32(7.1022, 50.7353), 60)  # the Markt
+    zentrum = min(wins, key=lambda w: abs(w[0] + 1024 - float(mx)) + abs(w[1] + 512 - float(my)))
     ox, oy = zentrum
     try:
         a = _city_window(tmp_path, ox, oy, poly)
